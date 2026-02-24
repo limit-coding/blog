@@ -9,6 +9,9 @@
 ### Vercel ###
 .vercel
 
+### Cloudflare ###
+.wrangler
+
 ### Vim ###
 # Swap
 [._]*.s[a-v][a-z]
@@ -69,7 +72,9 @@ node_modules/
 
 # environment variables
 .env
+.env.local
 .env.production
+.env.*.local
 
 # others
 .DS_Store
