@@ -3,9 +3,9 @@ import { glob } from 'astro/loaders';
 
 const posts = defineCollection({
   loader: glob({
-    pattern: '**/index.mdx',
+    pattern: '**/index.{md,mdx}',
     base: './src/content/posts',
-    generateId: ({ entry }) => entry.replace(/\/index\.mdx$/, ''),
+    generateId: ({ entry }) => entry.replace(/\/index\.(md|mdx)$/, ''),
   }),
   schema: ({ image }) =>
     z.object({
