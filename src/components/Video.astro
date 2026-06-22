@@ -1,0 +1,53 @@
+---
+interface Props {
+  embed?: string;
+  src?: string;
+  caption?: string;
+}
+
+const { embed, src, caption } = Astro.props;
+---
+
+<figure class="video">
+  {embed && (
+    <div class="frame">
+      <iframe
+        src={embed}
+        loading="lazy"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowfullscreen
+      />
+    </div>
+  )}
+  {src && !embed && <video controls preload="metadata" src={src} />}
+  {caption && <figcaption class="muted">{caption}</figcaption>}
+</figure>
+
+<style>
+  .video {
+    margin: 1.5rem 0;
+  }
+
+  .frame {
+    position: relative;
+    aspect-ratio: 16 / 9;
+  }
+
+  .frame iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+  }
+
+  video {
+    width: 100%;
+  }
+
+  figcaption {
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+    text-align: center;
+  }
+</style>

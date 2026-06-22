@@ -1,0 +1,51 @@
+---
+import { getCollection, render } from 'astro:content';
+import PostLayout from '../../layouts/PostLayout.astro';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('posts', ({ data }) => !data.draft);
+
+  const bySection = new Map<string, typeof posts>();
+  for (const post of posts) {
+    const list = bySection.get(post.data.section) ?? [];
+    list.push(post);
+    bySection.set(post.data.section, list);
+  }
+
+  return posts.map((post) => {
+    const slug = post.id.split('/').pop()!;
+    const siblings = bySection
+      .get(post.data.section)!
+      .sort((a, b) => a.data.date.valueOf() - b.data.date.valueOf());
+    const index = siblings.findIndex((p) => p.id === post.id);
+    const prevPost = siblings[index - 1];
+    const nextPost = siblings[index + 1];
+
+    return {
+      params: { section: post.data.section, slug },
+      props: {
+        post,
+        prev: prevPost && { title: prevPost.data.title, href: `/${prevPost.data.section}/${prevPost.id.split('/').pop()}/` },
+        next: nextPost && { title: nextPost.data.title, href: `/${nextPost.data.section}/${nextPost.id.split('/').pop()}/` },
+      },
+    };
+  });
+}
+
+const { post, prev, next } = Astro.props;
+const { Content } = await render(post);
+---
+
+<PostLayout
+  title={post.data.title}
+  description={post.data.description}
+  date={post.data.date}
+  updated={post.data.updated}
+  section={post.data.section}
+  tags={post.data.tags}
+  cover={post.data.cover}
+  prev={prev}
+  next={next}
+>
+  <Content />
+</PostLayout>

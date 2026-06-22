@@ -1,0 +1,45 @@
+---
+---
+
+<button id="theme-toggle" class="theme-toggle" type="button" aria-label="切换深色/浅色模式">
+  <span class="icon icon-sun">○</span>
+  <span class="icon icon-moon">●</span>
+</button>
+
+<style>
+  .theme-toggle {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    width: 2rem;
+    height: 2rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--muted);
+    font-size: 0.9rem;
+    line-height: 1;
+  }
+
+  .theme-toggle:hover {
+    color: var(--fg);
+  }
+
+  .icon-moon { display: none; }
+  :global([data-theme='dark']) .icon-sun { display: none; }
+  :global([data-theme='dark']) .icon-moon { display: inline; }
+</style>
+
+<script is:inline>
+  (function () {
+    const btn = document.getElementById('theme-toggle');
+    btn.addEventListener('click', () => {
+      const root = document.documentElement;
+      const current = root.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      const next = current === 'dark' ? 'light' : 'dark';
+      root.dataset.theme = next;
+      localStorage.setItem('theme', next);
+    });
+  })();
+</script>

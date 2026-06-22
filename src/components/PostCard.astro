@@ -1,0 +1,57 @@
+---
+import { getSectionMeta } from '../consts';
+
+interface Props {
+  section: string;
+  slug: string;
+  title: string;
+  description: string;
+  date: Date;
+  showSection?: boolean;
+}
+
+const { section, slug, title, description, date, showSection = false } = Astro.props;
+const meta = getSectionMeta(section);
+---
+
+<article class="post-card">
+  <a class="title" href={`/${section}/${slug}/`}>{title}</a>
+  <div class="meta muted">
+    <time datetime={date.toISOString()}>
+      {date.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })}
+    </time>
+    {showSection && meta && <span class="tag">{meta.label}</span>}
+  </div>
+  <p class="description muted">{description}</p>
+</article>
+
+<style>
+  .post-card {
+    padding: 1.25rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    text-decoration: none;
+    color: var(--fg);
+  }
+
+  .title:hover {
+    color: var(--accent);
+  }
+
+  .meta {
+    margin: 0.35rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  .description {
+    margin: 0.35rem 0 0;
+    font-size: 0.95rem;
+  }
+</style>

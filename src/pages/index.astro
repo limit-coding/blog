@@ -1,0 +1,73 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PostCard from '../components/PostCard.astro';
+import { SECTIONS, SITE_DESCRIPTION } from '../consts';
+
+const allPosts = await getCollection('posts', ({ data }) => !data.draft);
+const recent = allPosts.sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf()).slice(0, 8);
+---
+
+<BaseLayout description={SITE_DESCRIPTION}>
+  <section class="intro">
+    <p>{SITE_DESCRIPTION}</p>
+  </section>
+
+  <section class="sections-grid">
+    {SECTIONS.map((s) => (
+      <a class="section-card" href={`/${s.slug}/`}>
+        <h3>{s.label}</h3>
+        <p class="muted">{s.description}</p>
+      </a>
+    ))}
+  </section>
+
+  <h2>最近更新</h2>
+  {recent.length === 0 && <p class="muted">还没有文章，敬请期待。</p>}
+  {recent.map((post) => (
+    <PostCard
+      section={post.data.section}
+      slug={post.id.split('/').pop()!}
+      title={post.data.title}
+      description={post.data.description}
+      date={post.data.date}
+      showSection
+    />
+  ))}
+</BaseLayout>
+
+<style>
+  .intro {
+    margin: 1.5rem 0 2rem;
+  }
+
+  .sections-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .section-card {
+    display: block;
+    padding: 1rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    text-decoration: none;
+    color: var(--fg);
+  }
+
+  .section-card:hover {
+    border-color: var(--accent);
+  }
+
+  .section-card h3 {
+    margin: 0 0 0.35rem;
+    font-size: 1rem;
+  }
+
+  .section-card p {
+    margin: 0;
+    font-size: 0.85rem;
+  }
+</style>
