@@ -6,13 +6,40 @@ interface Props {
 }
 
 const { embed, src, caption } = Astro.props;
+
+function toEmbedUrl(link: string): string {
+  let u: URL;
+  try {
+    u = new URL(link);
+  } catch {
+    return link;
+  }
+
+  const host = u.hostname.replace(/^www\./, '');
+
+  if (host === 'youtube.com' && u.pathname === '/watch' && u.searchParams.get('v')) {
+    return `https://www.youtube.com/embed/${u.searchParams.get('v')}`;
+  }
+  if (host === 'youtu.be') {
+    return `https://www.youtube.com/embed${u.pathname}`;
+  }
+  if (host === 'bilibili.com' && u.pathname.startsWith('/video/')) {
+    const bvid = u.pathname.split('/')[2];
+    return `https://player.bilibili.com/player.html?bvid=${bvid}&high_quality=1`;
+  }
+
+  // already an embed-ready URL (youtube.com/embed/..., player.bilibili.com, ...)
+  return link;
+}
+
+const embedSrc = embed && toEmbedUrl(embed);
 ---
 
 <figure class="video">
-  {embed && (
+  {embedSrc && (
     <div class="frame">
       <iframe
-        src={embed}
+        src={embedSrc}
         loading="lazy"
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
         allowfullscreen
