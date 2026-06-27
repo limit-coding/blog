@@ -25,3 +25,7 @@ pnpm-debug.log*
 
 # local Claude Code settings
 .claude/
+
+# source material folders (not for publishing)
+备忘录收录/
+agent学习/
