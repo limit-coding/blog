@@ -24,6 +24,11 @@ jobs:
         uses: withastro/action@v3
         with:
           node-version: 22
+      - name: Save dist for mirror sync
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: ./dist
 
   deploy:
     needs: build
@@ -35,3 +40,25 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+  sync-to-server:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download dist
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: ./dist
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H 85.121.122.124 >> ~/.ssh/known_hosts
+      - name: Sync to mirror server
+        run: |
+          rsync -avz --delete \
+            -e "ssh -i ~/.ssh/deploy_key" \
+            ./dist/ \
+            root@85.121.122.124:/home/lvchenghao/blog-mirror/
