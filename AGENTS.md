@@ -117,6 +117,81 @@ Video 组件会自动把分享链接转成 embed URL。
 
 ---
 
+## 备忘录整理工作流（iCloud 导入）
+
+当用户把 Apple 备忘录（Notes.app）导出到 `iCloud/` 目录后，按以下流程整理成博客文章。
+
+### 整体步骤
+
+```
+读取笔记 → 清理格式 → 写博客文章 → 处理图片 → astro build 验证 → git push → rm -rf iCloud/
+```
+
+### 第一步：格式清理
+
+Apple Notes 导出的 .md 文件夹带 HTML 残留，整理前清除：
+
+```html
+<!-- 这类字体 span 标签全部删掉，只保留内部文字 -->
+<span style="font-family: .PingFangUITextSC-Regular;">文字</span>
+<span style="font-family: .AppleSystemUIFontMonospaced-Regular; font-size: 12.0;">代码</span>
+```
+
+- 代码字体的 span 内容改成 Markdown 行内代码（反引号）
+- 语音转写笔记语气词较多，适当精简，但保留第一人称的思考过程
+- Notes 里代码有时被拆成多个 ` ``` ` 片段，合并成一个并标注语言（` ```cpp `）
+
+### 第二步：整理成博客文章
+
+文章放在 `src/content/posts/<section>/<slug>/index.md`，常用 section：
+
+| section | 用途 |
+|---------|------|
+| `internship` | 实习、面试备考、Agent 项目、LeetCode |
+| `self-study` | 自学笔记 |
+| `tech` | 技术实践 |
+| `learning` | 学习方法 |
+
+写作要求：保留第一人称视角和思考过程；有多次迭代的笔记，整理成"初步想法 → 发现问题 → 正确方案"结构。
+
+### 第三步：图片处理
+
+图片在 `iCloud/Notes/images/`，文件名是 UUID 格式。
+
+1. 用 Read 工具逐一查看图片，判断属于哪篇笔记
+2. 复制到对应文章目录，封面图命名 `cover.jpg`，frontmatter 加 `cover: ./cover.jpg`
+3. 正文插图命名描述性名称，用 `![说明](./图片名.png)` 插入正文
+
+**根目录散落的图片**（用户直接拖进来的）：复制到文章目录后删掉根目录的原文件。
+
+**用户指定归属时**（"把这张图加到 xxx 文章"）：直接按指示操作。
+
+### 第四步：验证 + 推送 + 清理
+
+```bash
+# 构建验证，页面数量应该增加
+npx astro build
+
+# 只 add 博客文章（iCloud/ 在 .gitignore 里，不会被误提交）
+git add src/content/posts/...
+git commit -m "feat: add xxx posts from iCloud notes"
+git push origin main
+
+# 整理完删除临时目录
+rm -rf iCloud/
+```
+
+### 常见情况
+
+| 情况 | 处理方式 |
+|------|----------|
+| 笔记只有代码没解释 | 补写思路说明再发 |
+| 多个笔记同一主题 | 合并成一篇，按迭代顺序整理 |
+| 图片 UUID 不知道对应哪篇 | Read 工具逐一看图，对照笔记主题判断 |
+| 笔记内容太短不值得单独成文 | 合并到相关文章里作为一节 |
+
+---
+
 ## Documentation
 
 完整文档：https://docs.astro.build
