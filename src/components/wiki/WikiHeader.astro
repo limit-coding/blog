@@ -1,0 +1,40 @@
+---
+import { SECTIONS, SITE_TITLE } from '../../consts';
+
+const path = new URL(Astro.request.url).pathname;
+---
+
+<header class="wiki-site-header">
+  <div class="wiki-header-inner">
+    <a class="wiki-wordmark" href="/" aria-label={`${SITE_TITLE} 知识库首页`}>
+      <span class="wiki-monogram" aria-hidden="true">L</span>
+      <span>
+        <strong>{SITE_TITLE}</strong>
+        <small>个人知识库</small>
+      </span>
+    </a>
+
+    <form class="wiki-search" action="/" role="search">
+      <label class="sr-only" for="wiki-search-input">搜索文章</label>
+      <input id="wiki-search-input" name="q" type="search" placeholder="搜索知识库" autocomplete="off" />
+      <button type="submit">搜索</button>
+    </form>
+
+    <nav class="wiki-top-links" aria-label="站点导航">
+      <a href="/" aria-current={path === '/' ? 'page' : undefined}>首页</a>
+      <a href="/about/">关于</a>
+      <a href="/classic/">原版</a>
+    </nav>
+
+    <details class="wiki-mobile-menu">
+      <summary>目录</summary>
+      <div>
+        <a href="/">首页</a>
+        {SECTIONS.map((section) => (
+          <a href={`/${section.slug}/`}>{section.label}</a>
+        ))}
+        <a href="/classic/">返回原版</a>
+      </div>
+    </details>
+  </div>
+</header>

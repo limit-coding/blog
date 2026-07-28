@@ -1,11 +1,11 @@
 ---
 import { getCollection, render } from 'astro:content';
-import WikiPostLayout from '../../layouts/WikiPostLayout.astro';
+import PostLayout from '../../../layouts/PostLayout.astro';
 
 export async function getStaticPaths() {
   const posts = await getCollection('posts', ({ data }) => !data.draft);
-  const bySection = new Map<string, typeof posts>();
 
+  const bySection = new Map<string, typeof posts>();
   for (const post of posts) {
     const list = bySection.get(post.data.section) ?? [];
     list.push(post);
@@ -27,11 +27,11 @@ export async function getStaticPaths() {
         post,
         prev: prevPost && {
           title: prevPost.data.title,
-          href: `/${prevPost.data.section}/${prevPost.id.split('/').pop()}/`,
+          href: `/classic/${prevPost.data.section}/${prevPost.id.split('/').pop()}/`,
         },
         next: nextPost && {
           title: nextPost.data.title,
-          href: `/${nextPost.data.section}/${nextPost.id.split('/').pop()}/`,
+          href: `/classic/${nextPost.data.section}/${nextPost.id.split('/').pop()}/`,
         },
       },
     };
@@ -39,10 +39,10 @@ export async function getStaticPaths() {
 }
 
 const { post, prev, next } = Astro.props;
-const { Content, headings } = await render(post);
+const { Content } = await render(post);
 ---
 
-<WikiPostLayout
+<PostLayout
   title={post.data.title}
   description={post.data.description}
   date={post.data.date}
@@ -50,9 +50,10 @@ const { Content, headings } = await render(post);
   section={post.data.section}
   tags={post.data.tags}
   cover={post.data.cover}
-  headings={headings}
   prev={prev}
   next={next}
+  basePath="/classic"
+  noindex
 >
   <Content />
-</WikiPostLayout>
+</PostLayout>

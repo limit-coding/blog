@@ -8,14 +8,15 @@ interface Props {
   description: string;
   date: Date;
   showSection?: boolean;
+  basePath?: string;
 }
 
-const { section, slug, title, description, date, showSection = false } = Astro.props;
+const { section, slug, title, description, date, showSection = false, basePath = '' } = Astro.props;
 const meta = getSectionMeta(section);
 ---
 
 <article class="post-card">
-  <a class="title" href={`/${section}/${slug}/`}>{title}</a>
+  <a class="title" href={`${basePath}/${section}/${slug}/`}>{title}</a>
   <div class="meta muted">
     <time datetime={date.toISOString()}>
       {date.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })}

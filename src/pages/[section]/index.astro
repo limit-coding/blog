@@ -1,33 +1,68 @@
 ---
 import { getCollection } from 'astro:content';
-import BaseLayout from '../../layouts/BaseLayout.astro';
-import PostCard from '../../components/PostCard.astro';
+import WikiLayout from '../../layouts/WikiLayout.astro';
 import { SECTIONS } from '../../consts';
 
 export function getStaticPaths() {
-  return SECTIONS.map((s) => ({ params: { section: s.slug } }));
+  return SECTIONS.map((section) => ({ params: { section: section.slug } }));
 }
 
 const { section } = Astro.params;
-const meta = SECTIONS.find((s) => s.slug === section)!;
-
+const meta = SECTIONS.find((item) => item.slug === section)!;
 const posts = (await getCollection('posts', ({ data }) => !data.draft && data.section === section)).sort(
   (a, b) => b.data.date.valueOf() - a.data.date.valueOf(),
 );
+const formatDate = (value: Date) =>
+  value.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' });
 ---
 
-<BaseLayout title={meta.label} description={meta.description}>
-  <h1>{meta.label}</h1>
-  <p class="muted">{meta.description}</p>
+<WikiLayout title={meta.label} description={meta.description} pageClass="wiki-section-page">
+  <div class="wiki-section-shell">
+    <aside class="wiki-section-sidebar" aria-label="主题目录">
+      <strong>主题</strong>
+      {SECTIONS.map((item) => (
+        <a class:list={{ 'is-active': item.slug === meta.slug }} href={`/${item.slug}/`}>
+          {item.label}
+        </a>
+      ))}
+    </aside>
 
-  {posts.length === 0 && <p class="muted">这个板块还没有文章。</p>}
-  {posts.map((post) => (
-    <PostCard
-      section={post.data.section}
-      slug={post.id.split('/').pop()!}
-      title={post.data.title}
-      description={post.data.description}
-      date={post.data.date}
-    />
-  ))}
-</BaseLayout>
+    <section class="wiki-section-content">
+      <nav class="wiki-breadcrumbs" aria-label="面包屑">
+        <a href="/">知识库</a>
+        <span aria-hidden="true">›</span>
+        <span>{meta.label}</span>
+      </nav>
+      <header class="wiki-section-header">
+        <p class="wiki-kicker">主题条目</p>
+        <h1>{meta.label}</h1>
+        <p>{meta.description}。当前收录 {posts.length} 篇文章。</p>
+      </header>
+
+      {posts.length === 0 ? (
+        <p class="wiki-notice">这个主题暂时还没有文章。</p>
+      ) : (
+        <ol class="wiki-entry-list">
+          {posts.map((post) => {
+            const slug = post.id.split('/').pop()!;
+            return (
+              <li>
+                <div class="wiki-entry-marker" aria-hidden="true"></div>
+                <div>
+                  <a class="wiki-entry-title" href={`/${post.data.section}/${slug}/`}>
+                    {post.data.title}
+                  </a>
+                  <p>{post.data.description}</p>
+                  <small>
+                    {formatDate(post.data.updated ?? post.data.date)}
+                    {post.data.tags.length > 0 && ` · ${post.data.tags.join('、')}`}
+                  </small>
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+      )}
+    </section>
+  </div>
+</WikiLayout>

@@ -1,20 +1,20 @@
 ---
-import Nav from '../components/Nav.astro';
-import Footer from '../components/Footer.astro';
+import WikiHeader from '../components/wiki/WikiHeader.astro';
+import WikiFooter from '../components/wiki/WikiFooter.astro';
 import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
-import '../styles/global.css';
+import '../styles/wiki.css';
 
 interface Props {
   title?: string;
   description?: string;
-  basePath?: string;
-  noindex?: boolean;
+  pageClass?: string;
 }
 
-const { title, description = SITE_DESCRIPTION, basePath = '', noindex = false } = Astro.props;
-const pageTitle = title ? `${title} · ${SITE_TITLE}` : SITE_TITLE;
+const { title, description = SITE_DESCRIPTION, pageClass = '' } = Astro.props;
+const pageTitle = title ? `${title} — ${SITE_TITLE} 知识库` : `${SITE_TITLE} — 个人知识库`;
 ---
 
+<!doctype html>
 <html lang="zh-CN">
   <head>
     <meta charset="utf-8" />
@@ -23,21 +23,15 @@ const pageTitle = title ? `${title} · ${SITE_TITLE}` : SITE_TITLE;
     <meta name="generator" content={Astro.generator} />
     <title>{pageTitle}</title>
     <meta name="description" content={description} />
-    {noindex && <meta name="robots" content="noindex, nofollow" />}
     <link rel="alternate" type="application/rss+xml" title={SITE_TITLE} href="/rss.xml" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" />
-    <script is:inline>
-      (function () {
-        const saved = localStorage.getItem('theme');
-        if (saved) document.documentElement.dataset.theme = saved;
-      })();
-    </script>
   </head>
-  <body>
-    <Nav basePath={basePath} />
-    <main>
+  <body class={pageClass}>
+    <a class="wiki-skip-link" href="#wiki-main">跳到正文</a>
+    <WikiHeader />
+    <main id="wiki-main">
       <slot />
     </main>
-    <Footer />
+    <WikiFooter />
   </body>
 </html>

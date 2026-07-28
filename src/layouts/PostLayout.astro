@@ -19,16 +19,30 @@ interface Props {
   cover?: ImageMetadata;
   prev?: NeighborPost;
   next?: NeighborPost;
+  basePath?: string;
+  noindex?: boolean;
 }
 
-const { title, description, date, updated, section, tags = [], cover, prev, next } = Astro.props;
+const {
+  title,
+  description,
+  date,
+  updated,
+  section,
+  tags = [],
+  cover,
+  prev,
+  next,
+  basePath = '',
+  noindex = false,
+} = Astro.props;
 const meta = getSectionMeta(section);
 ---
 
-<BaseLayout title={title} description={description}>
+<BaseLayout title={title} description={description} basePath={basePath} noindex={noindex}>
   <article>
     <header class="post-header">
-      {meta && <a class="tag" href={`/${meta.slug}/`}>{meta.label}</a>}
+      {meta && <a class="tag" href={`${basePath}/${meta.slug}/`}>{meta.label}</a>}
       <h1>{title}</h1>
       <div class="meta muted">
         <time datetime={date.toISOString()}>

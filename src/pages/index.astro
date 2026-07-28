@@ -1,73 +1,139 @@
 ---
 import { getCollection } from 'astro:content';
-import BaseLayout from '../layouts/BaseLayout.astro';
-import PostCard from '../components/PostCard.astro';
+import WikiLayout from '../layouts/WikiLayout.astro';
 import { SECTIONS, SITE_DESCRIPTION } from '../consts';
 
-const allPosts = await getCollection('posts', ({ data }) => !data.draft);
-const recent = allPosts.sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf()).slice(0, 8);
+const allPosts = (await getCollection('posts', ({ data }) => !data.draft)).sort(
+  (a, b) => b.data.date.valueOf() - a.data.date.valueOf(),
+);
+const counts = new Map(SECTIONS.map((section) => [
+  section.slug,
+  allPosts.filter((post) => post.data.section === section.slug).length,
+]));
+const latestDate = allPosts.at(0)?.data.updated ?? allPosts.at(0)?.data.date;
+const formatDate = (value: Date) =>
+  value.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' });
 ---
 
-<BaseLayout description={SITE_DESCRIPTION}>
-  <section class="intro">
-    <p>{SITE_DESCRIPTION}</p>
-  </section>
+<WikiLayout description={SITE_DESCRIPTION} pageClass="wiki-home-page">
+  <div class="wiki-home-shell">
+    <aside class="wiki-home-sidebar" aria-label="知识库分类">
+      <strong>导航</strong>
+      <a class="is-active" href="/">首页</a>
+      {SECTIONS.map((section) => (
+        <a href={`/${section.slug}/`}>{section.label}</a>
+      ))}
+      <hr />
+      <a href="/rss.xml">RSS 订阅</a>
+      <a href="/classic/">返回原版</a>
+    </aside>
 
-  <section class="sections-grid">
-    {SECTIONS.map((s) => (
-      <a class="section-card" href={`/${s.slug}/`}>
-        <h3>{s.label}</h3>
-        <p class="muted">{s.description}</p>
-      </a>
-    ))}
-  </section>
+    <div class="wiki-home-content">
+      <section class="wiki-welcome">
+        <div>
+          <p class="wiki-kicker">个人知识档案</p>
+          <h1>欢迎来到 learnpath</h1>
+          <p>{SITE_DESCRIPTION}</p>
+        </div>
+        <dl class="wiki-stats">
+          <div>
+            <dt>{allPosts.length}</dt>
+            <dd>篇条目</dd>
+          </div>
+          <div>
+            <dt>{SECTIONS.length}</dt>
+            <dd>个主题</dd>
+          </div>
+          {latestDate && (
+            <div>
+              <dt>{latestDate.getFullYear()}</dt>
+              <dd>最近维护</dd>
+            </div>
+          )}
+        </dl>
+      </section>
 
-  <h2>最近更新</h2>
-  {recent.length === 0 && <p class="muted">还没有文章，敬请期待。</p>}
-  {recent.map((post) => (
-    <PostCard
-      section={post.data.section}
-      slug={post.id.split('/').pop()!}
-      title={post.data.title}
-      description={post.data.description}
-      date={post.data.date}
-      showSection
-    />
-  ))}
-</BaseLayout>
+      <noscript>
+        <p class="wiki-notice">站内筛选需要启用 JavaScript；你仍然可以按主题浏览全部文章。</p>
+      </noscript>
+      <p id="wiki-search-summary" class="wiki-search-summary" hidden></p>
 
-<style>
-  .intro {
-    margin: 1.5rem 0 2rem;
+      <div class="wiki-home-columns">
+        <section class="wiki-panel">
+          <header>
+            <h2>主题索引</h2>
+            <span>按领域浏览</span>
+          </header>
+          <div class="wiki-portals">
+            {SECTIONS.map((section, index) => (
+              <a class="wiki-portal" href={`/${section.slug}/`}>
+                <span class="wiki-portal-index">{String(index + 1).padStart(2, '0')}</span>
+                <span>
+                  <strong>{section.label}</strong>
+                  <small>{section.description}</small>
+                </span>
+                <em>{counts.get(section.slug)} 篇</em>
+              </a>
+            ))}
+          </div>
+        </section>
+
+        <section class="wiki-panel">
+          <header>
+            <h2>最近更新</h2>
+            <span>{latestDate ? formatDate(latestDate) : '暂无更新'}</span>
+          </header>
+          <ol class="wiki-recent-list" id="wiki-search-results">
+            {allPosts.map((post, index) => {
+              const slug = post.id.split('/').pop()!;
+              const section = SECTIONS.find((item) => item.slug === post.data.section);
+              return (
+                <li
+                  hidden={index >= 10}
+                  data-search={`${post.data.title} ${post.data.description} ${post.data.tags.join(' ')} ${section?.label ?? ''}`.toLowerCase()}
+                >
+                  <a href={`/${post.data.section}/${slug}/`}>{post.data.title}</a>
+                  <p>{post.data.description}</p>
+                  <small>
+                    {section?.label} · {formatDate(post.data.updated ?? post.data.date)}
+                  </small>
+                </li>
+              );
+            })}
+          </ol>
+          <p id="wiki-no-results" class="wiki-notice" hidden>没有找到匹配的条目。试试更短的关键词，或按左侧主题浏览。</p>
+        </section>
+      </div>
+
+      <section class="wiki-about-strip">
+        <h2>关于这个知识库</h2>
+        <p>
+          这里不是一套已经完成的答案，而是一份持续修订的学习地图。文章保留了当时的判断、踩坑和思路变化，
+          方便以后回看一项理解是怎样形成的。
+        </p>
+      </section>
+    </div>
+  </div>
+</WikiLayout>
+
+<script>
+  const params = new URLSearchParams(window.location.search);
+  const query = params.get('q')?.trim().toLowerCase() ?? '';
+  const input = document.querySelector<HTMLInputElement>('#wiki-search-input');
+  const summary = document.querySelector<HTMLElement>('#wiki-search-summary');
+  const noResults = document.querySelector<HTMLElement>('#wiki-no-results');
+  const items = [...document.querySelectorAll<HTMLElement>('[data-search]')];
+
+  if (query && input && summary && noResults) {
+    input.value = params.get('q') ?? '';
+    let matches = 0;
+    for (const item of items) {
+      const matched = item.dataset.search?.includes(query) ?? false;
+      item.hidden = !matched;
+      if (matched) matches += 1;
+    }
+    summary.hidden = false;
+    summary.textContent = `“${params.get('q')}”的搜索结果：${matches} 篇`;
+    noResults.hidden = matches !== 0;
   }
-
-  .sections-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 1rem;
-    margin-bottom: 2.5rem;
-  }
-
-  .section-card {
-    display: block;
-    padding: 1rem;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    text-decoration: none;
-    color: var(--fg);
-  }
-
-  .section-card:hover {
-    border-color: var(--accent);
-  }
-
-  .section-card h3 {
-    margin: 0 0 0.35rem;
-    font-size: 1rem;
-  }
-
-  .section-card p {
-    margin: 0;
-    font-size: 0.85rem;
-  }
-</style>
+</script>

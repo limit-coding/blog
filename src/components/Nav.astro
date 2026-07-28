@@ -3,16 +3,20 @@ import { SECTIONS, SITE_TITLE } from '../consts';
 import ThemeToggle from './ThemeToggle.astro';
 
 const path = new URL(Astro.request.url).pathname;
+const { basePath = '' } = Astro.props;
 ---
 
 <header class="nav">
   <div class="nav-inner">
-    <a class="brand" href="/">{SITE_TITLE}</a>
+    <a class="brand" href={`${basePath}/`}>{SITE_TITLE}</a>
     <nav>
       <ul>
         {SECTIONS.map((s) => (
           <li>
-            <a href={`/${s.slug}/`} aria-current={path.startsWith(`/${s.slug}`) ? 'page' : undefined}>
+            <a
+              href={`${basePath}/${s.slug}/`}
+              aria-current={path.startsWith(`${basePath}/${s.slug}`) ? 'page' : undefined}
+            >
               {s.label}
             </a>
           </li>

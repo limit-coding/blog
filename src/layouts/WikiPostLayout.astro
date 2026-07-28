@@ -1,0 +1,138 @@
+---
+import { Image } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
+import WikiLayout from './WikiLayout.astro';
+import { getSectionMeta } from '../consts';
+
+interface Heading {
+  depth: number;
+  slug: string;
+  text: string;
+}
+
+interface NeighborPost {
+  title: string;
+  href: string;
+}
+
+interface Props {
+  title: string;
+  description: string;
+  date: Date;
+  updated?: Date;
+  section: string;
+  tags?: string[];
+  cover?: ImageMetadata;
+  headings?: Heading[];
+  prev?: NeighborPost;
+  next?: NeighborPost;
+}
+
+const {
+  title,
+  description,
+  date,
+  updated,
+  section,
+  tags = [],
+  cover,
+  headings = [],
+  prev,
+  next,
+} = Astro.props;
+const meta = getSectionMeta(section);
+const tocHeadings = headings.filter((heading) => heading.depth === 2 || heading.depth === 3);
+const formatDate = (value: Date) =>
+  value.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' });
+---
+
+<WikiLayout title={title} description={description} pageClass="wiki-article-page">
+  <div class="wiki-article-shell">
+    <aside class="wiki-toc" aria-label="本文目录">
+      <div class="wiki-toc-inner">
+        <strong>目录</strong>
+        <a class="wiki-toc-start" href="#article-start">导言</a>
+        {tocHeadings.length > 0 ? (
+          <ol>
+            {tocHeadings.map((heading) => (
+              <li class:list={{ 'wiki-toc-subitem': heading.depth === 3 }}>
+                <a href={`#${heading.slug}`}>{heading.text}</a>
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <p>短条目，无分节。</p>
+        )}
+      </div>
+    </aside>
+
+    <article class="wiki-article" id="article-start">
+      <header class="wiki-article-header">
+        <div class="wiki-breadcrumbs">
+          <a href="/">知识库</a>
+          <span aria-hidden="true">›</span>
+          {meta && <a href={`/${meta.slug}/`}>{meta.label}</a>}
+        </div>
+        <h1>{title}</h1>
+        <p class="wiki-article-description">{description}</p>
+        <div class="wiki-article-tabs" aria-label="文章信息">
+          <span aria-current="page">条目</span>
+          <span>初次记录于 {formatDate(date)}</span>
+          {updated && <span>修订于 {formatDate(updated)}</span>}
+        </div>
+      </header>
+
+      {cover && (
+        <figure class="wiki-cover">
+          <Image src={cover} alt="" widths={[480, 800, 1200]} sizes="(min-width: 900px) 760px, 100vw" />
+        </figure>
+      )}
+
+      <div class="wiki-prose">
+        <slot />
+      </div>
+
+      {tags.length > 0 && (
+        <section class="wiki-categories" aria-label="文章标签">
+          <strong>分类：</strong>
+          {tags.map((tag) => <span>{tag}</span>)}
+        </section>
+      )}
+
+      {(prev || next) && (
+        <nav class="wiki-neighbors" aria-label="相邻文章">
+          <div>
+            <small>上一篇</small>
+            {prev ? <a href={prev.href}>{prev.title}</a> : <span>没有了</span>}
+          </div>
+          <div>
+            <small>下一篇</small>
+            {next ? <a href={next.href}>{next.title}</a> : <span>没有了</span>}
+          </div>
+        </nav>
+      )}
+    </article>
+
+    <aside class="wiki-page-info" aria-label="条目信息">
+      <div class="wiki-info-box">
+        <strong>条目信息</strong>
+        <dl>
+          <div>
+            <dt>主题</dt>
+            <dd>{meta?.label ?? section}</dd>
+          </div>
+          <div>
+            <dt>建立</dt>
+            <dd>{formatDate(date)}</dd>
+          </div>
+          {updated && (
+            <div>
+              <dt>修订</dt>
+              <dd>{formatDate(updated)}</dd>
+            </div>
+          )}
+        </dl>
+      </div>
+    </aside>
+  </div>
+</WikiLayout>
