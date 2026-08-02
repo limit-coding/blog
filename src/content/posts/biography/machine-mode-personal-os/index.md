@@ -3,7 +3,7 @@ title: 机器模式：我为自己写下的一套个人操作系统
 description: 从规则化决策到识别内耗，我怎样设计“机器模式”，又怎样防止它变成新的束缚。
 section: biography
 date: 2026-05-01
-updated: 2026-07-31
+updated: 2026-08-02
 tags: [个人传记, 自我管理, 决策系统, 数字自我]
 ---
 
@@ -63,3 +63,14 @@ tags: [个人传记, 自我管理, 决策系统, 数字自我]
 
 我仍然会犹豫、冲动和走弯路。机器模式真正带来的进步，不是让我永远正确，而是让我更早发现偏差，并留下下一次可以继续迭代的记录。
 
+## 从设计进入训练
+
+这篇文章记录的是机器模式的版本演化。把它真正放进生活以后，我又围绕执行、规则、校验和迁移整理了一组训练笔记：
+
+- [机器模式训练手册：从识别状态到稳定执行](/biography/machine-mode-training-manual/)
+- [人与规则：把经验压缩成可修改的协议](/biography/rules-compression-and-choice/)
+- [防止机器模式过拟合：个人规则也需要验证集](/biography/machine-mode-anti-overfitting/)
+- [非对称性原理：真正推动成长的是可转化的缺口](/biography/asymmetry-and-productive-gaps/)
+- [把准备变成训练：三个闭环案例](/biography/training-closed-loops/)
+
+它们不是一套要求所有人照做的规范，而是我对自己进行的一组长期实验。公开这些记录的意义，也在于让方法接受更多现实反馈。
