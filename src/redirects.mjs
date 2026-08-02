@@ -1,0 +1,68 @@
+const movedRoutes = {
+  // 拆分后的合集入口
+  '/biography/childhood-science-awakening': '/biography/kindergarten-years',
+  '/biography/middle-school-learning-gap': '/biography/grade-seven-first-semester',
+  '/biography/undergraduate-first-two-years': '/biography/freshman-first-semester',
+  '/biography/robotics-research-first-days': '/research/embodied-research-day-one',
+  '/biography/electronics-contest-four-day-log': '/electronics/electronics-contest-day-one',
+  '/biography/machine-mode-anti-overfitting': '/machine-mode/prevent-overfitting',
+  '/biography/machine-mode-personal-os': '/machine-mode/version-number',
+  '/biography/machine-mode-training-manual': '/machine-mode/training-plan',
+  '/biography/rules-compression-and-choice': '/machine-mode/people-and-rules',
+  '/biography/training-closed-loops': '/machine-mode/interview-training',
+  '/electronics/frequency-search-evolution': '/electronics/visual-system-plan-new',
+  '/electronics/lissajous-vision-pipeline': '/electronics/camera-adjustment',
+  '/electronics/time-frequency-waveform-tradeoff': '/electronics/communication-notes',
+  '/electronics/visual-frequency-phase-locking': '/electronics/electronics-contest-f-problem',
+  '/internship/prefix-sum-hash-patterns': '/algorithms/lc560-subarray-sum',
+  '/internship/tree-recursion-return-values': '/algorithms/lc104-max-depth',
+  '/internship/tree-traversal-toolkit': '/algorithms/lc94-inorder-traversal',
+  '/learning/ai-information-metabolism': '/learning/ai-era-information-processing',
+  '/philosophy/flow-and-recovery': '/philosophy/flow-notes',
+  '/philosophy/hype-vs-tailwind': '/philosophy/hype-is-not-track',
+  '/tech/learning-roadmap-platform-architecture': '/tech/learning-platform-design',
+  '/tech/multi-agent-retail-workflow': '/tech/multi-agent-coordination',
+
+  // 迁移到更细分类的单篇文章
+  '/biography/asymmetry-and-productive-gaps': '/machine-mode/asymmetry-and-productive-gaps',
+  '/biography/digital-self-research-direction': '/research/digital-self-research-direction',
+  '/biography/from-interview-to-research': '/career/from-interview-to-research',
+  '/biography/internship-choice-framework': '/career/internship-choice-framework',
+  '/self-study/choosing-research-mentor': '/research/choosing-research-mentor',
+  '/internship/bytedance-ai-platform-interview': '/career/bytedance-ai-platform-interview',
+  '/learning/leetcode-study-method': '/algorithms/leetcode-study-method',
+
+  // 算法文章从实习目录迁出
+  '/internship/hot1-two-sum': '/algorithms/hot1-two-sum',
+  '/internship/hot11-container-with-most-water': '/algorithms/hot11-container-with-most-water',
+  '/internship/hot128-longest-consecutive': '/algorithms/hot128-longest-consecutive',
+  '/internship/hot141-linked-list-cycle': '/algorithms/hot141-linked-list-cycle',
+  '/internship/hot142-linked-list-cycle-ii': '/algorithms/hot142-linked-list-cycle-ii',
+  '/internship/hot146-lru-cache': '/algorithms/hot146-lru-cache',
+  '/internship/hot15-3sum': '/algorithms/hot15-3sum',
+  '/internship/hot160-intersection-list': '/algorithms/hot160-intersection-list',
+  '/internship/hot19-remove-nth-node': '/algorithms/hot19-remove-nth-node',
+  '/internship/hot2-add-two-numbers': '/algorithms/hot2-add-two-numbers',
+  '/internship/hot20-valid-parentheses': '/algorithms/hot20-valid-parentheses',
+  '/internship/hot206-reverse-list': '/algorithms/hot206-reverse-list',
+  '/internship/hot21-merge-two-lists': '/algorithms/hot21-merge-two-lists',
+  '/internship/hot23-merge-k-lists': '/algorithms/hot23-merge-k-lists',
+  '/internship/hot234-palindrome': '/algorithms/hot234-palindrome',
+  '/internship/hot24-swap-pairs': '/algorithms/hot24-swap-pairs',
+  '/internship/hot25-reverse-k-group': '/algorithms/hot25-reverse-k-group',
+  '/internship/hot42-trapping-rain-water': '/algorithms/hot42-trapping-rain-water',
+  '/internship/hot49-group-anagrams': '/algorithms/hot49-group-anagrams',
+  '/internship/hot5-longest-palindromic-substring': '/algorithms/hot5-longest-palindromic-substring',
+  '/internship/hot54-spiral-matrix': '/algorithms/hot54-spiral-matrix',
+  '/internship/hot70-climbing-stairs': '/algorithms/hot70-climbing-stairs',
+  '/internship/hot76-minimum-window-substring': '/algorithms/hot76-minimum-window-substring',
+  '/internship/lc148-sort-list': '/algorithms/lc148-sort-list',
+  '/internship/monotonic-stack-largest-rectangle': '/algorithms/monotonic-stack-largest-rectangle',
+  '/internship/sliding-window': '/algorithms/sliding-window',
+};
+
+const classicRoutes = Object.fromEntries(
+  Object.entries(movedRoutes).map(([from, to]) => [`/classic${from}`, `/classic${to}`]),
+);
+
+export default { ...movedRoutes, ...classicRoutes };
