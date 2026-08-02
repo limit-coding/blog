@@ -1,4 +1,6 @@
-const movedRoutes = {
+import { nestedPostRoutes } from './content-topics.mjs';
+
+const historicalRoutes = {
   // 拆分后的合集入口
   '/biography/childhood-science-awakening': '/biography/kindergarten-years',
   '/biography/middle-school-learning-gap': '/biography/grade-seven-first-semester',
@@ -60,6 +62,12 @@ const movedRoutes = {
   '/internship/monotonic-stack-largest-rectangle': '/algorithms/monotonic-stack-largest-rectangle',
   '/internship/sliding-window': '/algorithms/sliding-window',
 };
+
+const legacyRoutes = Object.fromEntries(
+  Object.entries(historicalRoutes).map(([from, to]) => [from, nestedPostRoutes[to] ?? to]),
+);
+
+const movedRoutes = { ...legacyRoutes, ...nestedPostRoutes };
 
 const classicRoutes = Object.fromEntries(
   Object.entries(movedRoutes).map(([from, to]) => [`/classic${from}`, `/classic${to}`]),

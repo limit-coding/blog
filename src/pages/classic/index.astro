@@ -27,7 +27,7 @@ const recent = allPosts.sort((a, b) => b.data.date.valueOf() - a.data.date.value
   {recent.map((post) => (
     <PostCard
       section={post.data.section}
-      slug={post.id.split('/').pop()!}
+      slug={post.id.split('/').slice(1).join('/')}
       title={post.data.title}
       description={post.data.description}
       date={post.data.date}

@@ -1,0 +1,62 @@
+---
+import { getCollection, render } from 'astro:content';
+import WikiPostLayout from '../../layouts/WikiPostLayout.astro';
+import { getPostTopic, getTopicMeta } from '../../content-topics.mjs';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('posts', ({ data }) => !data.draft);
+  const bySection = new Map<string, typeof posts>();
+
+  for (const post of posts) {
+    const list = bySection.get(post.data.section) ?? [];
+    list.push(post);
+    bySection.set(post.data.section, list);
+  }
+
+  return posts.map((post) => {
+    const slug = post.id.split('/').slice(1).join('/');
+    const topicSlug = getPostTopic(post.id);
+    const siblings = bySection
+      .get(post.data.section)!
+      .sort((a, b) => a.data.date.valueOf() - b.data.date.valueOf());
+    const index = siblings.findIndex((item) => item.id === post.id);
+    const prevPost = siblings[index - 1];
+    const nextPost = siblings[index + 1];
+
+    return {
+      params: { section: post.data.section, slug },
+      props: {
+        post,
+        topic: topicSlug && getTopicMeta(post.data.section, topicSlug),
+        prev: prevPost && {
+          title: prevPost.data.title,
+          href: `/${prevPost.id}/`,
+        },
+        next: nextPost && {
+          title: nextPost.data.title,
+          href: `/${nextPost.id}/`,
+        },
+      },
+    };
+  });
+}
+
+const { post, topic, prev, next } = Astro.props;
+const { Content, headings } = await render(post);
+---
+
+<WikiPostLayout
+  title={post.data.title}
+  description={post.data.description}
+  date={post.data.date}
+  updated={post.data.updated}
+  section={post.data.section}
+  topic={topic}
+  tags={post.data.tags}
+  cover={post.data.cover}
+  headings={headings}
+  prev={prev}
+  next={next}
+>
+  <Content />
+</WikiPostLayout>

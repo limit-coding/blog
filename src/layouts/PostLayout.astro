@@ -9,12 +9,18 @@ interface NeighborPost {
   href: string;
 }
 
+interface TopicMeta {
+  slug: string;
+  label: string;
+}
+
 interface Props {
   title: string;
   description: string;
   date: Date;
   updated?: Date;
   section: string;
+  topic?: TopicMeta;
   tags?: string[];
   cover?: ImageMetadata;
   prev?: NeighborPost;
@@ -29,6 +35,7 @@ const {
   date,
   updated,
   section,
+  topic,
   tags = [],
   cover,
   prev,
@@ -43,6 +50,7 @@ const meta = getSectionMeta(section);
   <article>
     <header class="post-header">
       {meta && <a class="tag" href={`${basePath}/${meta.slug}/`}>{meta.label}</a>}
+      {topic && <a class="tag" href={`${basePath}/${section}/#${topic.slug}`}>{topic.label}</a>}
       <h1>{title}</h1>
       <div class="meta muted">
         <time datetime={date.toISOString()}>

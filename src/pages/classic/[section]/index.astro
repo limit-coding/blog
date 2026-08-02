@@ -3,6 +3,7 @@ import { getCollection } from 'astro:content';
 import BaseLayout from '../../../layouts/BaseLayout.astro';
 import PostCard from '../../../components/PostCard.astro';
 import { SECTIONS } from '../../../consts';
+import { getPostTopic, getTopicGroups } from '../../../content-topics.mjs';
 
 export function getStaticPaths() {
   return SECTIONS.map((section) => ({ params: { section: section.slug } }));
@@ -13,6 +14,14 @@ const meta = SECTIONS.find((item) => item.slug === section)!;
 const posts = (await getCollection('posts', ({ data }) => !data.draft && data.section === section)).sort(
   (a, b) => b.data.date.valueOf() - a.data.date.valueOf(),
 );
+const topicGroups = getTopicGroups(section)
+  .map((topic) => ({
+    ...topic,
+    posts: posts.filter((post) => getPostTopic(post.id) === topic.slug),
+  }))
+  .filter((topic) => topic.posts.length > 0);
+const groupedPostIds = new Set(topicGroups.flatMap((topic) => topic.posts.map((post) => post.id)));
+const loosePosts = posts.filter((post) => !groupedPostIds.has(post.id));
 ---
 
 <BaseLayout title={meta.label} description={meta.description} basePath="/classic" noindex>
@@ -20,14 +29,64 @@ const posts = (await getCollection('posts', ({ data }) => !data.draft && data.se
   <p class="muted">{meta.description}</p>
 
   {posts.length === 0 && <p class="muted">这个板块还没有文章。</p>}
-  {posts.map((post) => (
-    <PostCard
-      section={post.data.section}
-      slug={post.id.split('/').pop()!}
-      title={post.data.title}
-      description={post.data.description}
-      date={post.data.date}
-      basePath="/classic"
-    />
-  ))}
+  {topicGroups.length > 0 ? (
+    <>
+      {topicGroups.map((topic) => (
+        <section class="topic-group" id={topic.slug}>
+          <h2>{topic.label}</h2>
+          <p class="muted topic-description">{topic.description}</p>
+          {topic.posts.map((post) => (
+            <PostCard
+              section={post.data.section}
+              slug={post.id.split('/').slice(1).join('/')}
+              title={post.data.title}
+              description={post.data.description}
+              date={post.data.date}
+              basePath="/classic"
+            />
+          ))}
+        </section>
+      ))}
+      {loosePosts.length > 0 && (
+        <section class="topic-group" id="other">
+          <h2>其他记录</h2>
+          {loosePosts.map((post) => (
+            <PostCard
+              section={post.data.section}
+              slug={post.id.split('/').slice(1).join('/')}
+              title={post.data.title}
+              description={post.data.description}
+              date={post.data.date}
+              basePath="/classic"
+            />
+          ))}
+        </section>
+      )}
+    </>
+  ) : (
+    posts.map((post) => (
+      <PostCard
+        section={post.data.section}
+        slug={post.id.split('/').slice(1).join('/')}
+        title={post.data.title}
+        description={post.data.description}
+        date={post.data.date}
+        basePath="/classic"
+      />
+    ))
+  )}
 </BaseLayout>
+
+<style>
+  .topic-group {
+    margin-top: 2.5rem;
+  }
+
+  .topic-group h2 {
+    margin-bottom: 0.25rem;
+  }
+
+  .topic-description {
+    margin-top: 0;
+  }
+</style>

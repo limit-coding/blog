@@ -15,12 +15,18 @@ interface NeighborPost {
   href: string;
 }
 
+interface TopicMeta {
+  slug: string;
+  label: string;
+}
+
 interface Props {
   title: string;
   description: string;
   date: Date;
   updated?: Date;
   section: string;
+  topic?: TopicMeta;
   tags?: string[];
   cover?: ImageMetadata;
   headings?: Heading[];
@@ -34,6 +40,7 @@ const {
   date,
   updated,
   section,
+  topic,
   tags = [],
   cover,
   headings = [],
@@ -72,6 +79,12 @@ const formatDate = (value: Date) =>
           <a href="/">知识库</a>
           <span aria-hidden="true">›</span>
           {meta && <a href={`/${meta.slug}/`}>{meta.label}</a>}
+          {topic && (
+            <>
+              <span aria-hidden="true">›</span>
+              <a href={`/${section}/#${topic.slug}`}>{topic.label}</a>
+            </>
+          )}
         </div>
         <h1>{title}</h1>
         <p class="wiki-article-description">{description}</p>
@@ -121,6 +134,12 @@ const formatDate = (value: Date) =>
             <dt>主题</dt>
             <dd>{meta?.label ?? section}</dd>
           </div>
+          {topic && (
+            <div>
+              <dt>小主题</dt>
+              <dd>{topic.label}</dd>
+            </div>
+          )}
           <div>
             <dt>建立</dt>
             <dd>{formatDate(date)}</dd>

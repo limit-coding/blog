@@ -85,14 +85,13 @@ const formatDate = (value: Date) =>
           </header>
           <ol class="wiki-recent-list" id="wiki-search-results">
             {allPosts.map((post, index) => {
-              const slug = post.id.split('/').pop()!;
               const section = SECTIONS.find((item) => item.slug === post.data.section);
               return (
                 <li
                   hidden={index >= 10}
                   data-search={`${post.data.title} ${post.data.description} ${post.data.tags.join(' ')} ${section?.label ?? ''}`.toLowerCase()}
                 >
-                  <a href={`/${post.data.section}/${slug}/`}>{post.data.title}</a>
+                  <a href={`/${post.id}/`}>{post.data.title}</a>
                   <p>{post.data.description}</p>
                   <small>
                     {section?.label} · {formatDate(post.data.updated ?? post.data.date)}

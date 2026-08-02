@@ -286,6 +286,12 @@ input {
   margin: 0.75rem 0;
 }
 
+.wiki-section-sidebar hr {
+  border: 0;
+  border-top: 1px solid var(--wiki-border-light);
+  margin: 0.9rem 0;
+}
+
 .wiki-home-content {
   min-width: 0;
 }
@@ -524,6 +530,47 @@ input {
 .wiki-section-header > p:last-child {
   margin: 0.5rem 0 0;
   color: var(--wiki-subtle);
+}
+
+.wiki-topic-groups {
+  margin-top: 1.75rem;
+}
+
+.wiki-topic-group {
+  scroll-margin-top: 1rem;
+  margin-top: 2.25rem;
+}
+
+.wiki-topic-group:first-child {
+  margin-top: 0;
+}
+
+.wiki-topic-header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 0.55rem;
+  border-bottom: 1px solid var(--wiki-border);
+}
+
+.wiki-topic-header h2 {
+  margin: 0;
+  font-family: var(--wiki-serif);
+  font-size: 1.55rem;
+  font-weight: 400;
+}
+
+.wiki-topic-header > span {
+  flex: 0 0 auto;
+  color: var(--wiki-subtle);
+  font-size: 0.78rem;
+}
+
+.wiki-topic-description {
+  margin: 0.65rem 0 0;
+  color: var(--wiki-subtle);
+  font-size: 0.88rem;
 }
 
 .wiki-entry-list {

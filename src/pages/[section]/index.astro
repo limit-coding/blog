@@ -2,6 +2,7 @@
 import { getCollection } from 'astro:content';
 import WikiLayout from '../../layouts/WikiLayout.astro';
 import { SECTIONS } from '../../consts';
+import { getPostTopic, getTopicGroups } from '../../content-topics.mjs';
 
 export function getStaticPaths() {
   return SECTIONS.map((section) => ({ params: { section: section.slug } }));
@@ -12,6 +13,14 @@ const meta = SECTIONS.find((item) => item.slug === section)!;
 const posts = (await getCollection('posts', ({ data }) => !data.draft && data.section === section)).sort(
   (a, b) => b.data.date.valueOf() - a.data.date.valueOf(),
 );
+const topicGroups = getTopicGroups(section)
+  .map((topic) => ({
+    ...topic,
+    posts: posts.filter((post) => getPostTopic(post.id) === topic.slug),
+  }))
+  .filter((topic) => topic.posts.length > 0);
+const groupedPostIds = new Set(topicGroups.flatMap((topic) => topic.posts.map((post) => post.id)));
+const loosePosts = posts.filter((post) => !groupedPostIds.has(post.id));
 const formatDate = (value: Date) =>
   value.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' });
 ---
@@ -19,12 +28,21 @@ const formatDate = (value: Date) =>
 <WikiLayout title={meta.label} description={meta.description} pageClass="wiki-section-page">
   <div class="wiki-section-shell">
     <aside class="wiki-section-sidebar" aria-label="主题目录">
-      <strong>主题</strong>
+      <strong>分类</strong>
       {SECTIONS.map((item) => (
         <a class:list={{ 'is-active': item.slug === meta.slug }} href={`/${item.slug}/`}>
           {item.label}
         </a>
       ))}
+      {topicGroups.length > 0 && (
+        <>
+          <hr />
+          <strong>小主题</strong>
+          {topicGroups.map((topic) => (
+            <a href={`#${topic.slug}`}>{topic.label}（{topic.posts.length}）</a>
+          ))}
+        </>
+      )}
     </aside>
 
     <section class="wiki-section-content">
@@ -41,15 +59,74 @@ const formatDate = (value: Date) =>
 
       {posts.length === 0 ? (
         <p class="wiki-notice">这个主题暂时还没有文章。</p>
+      ) : topicGroups.length > 0 ? (
+        <div class="wiki-topic-groups">
+          {topicGroups.map((topic) => (
+            <section class="wiki-topic-group" id={topic.slug}>
+              <header class="wiki-topic-header">
+                <div>
+                  <p class="wiki-kicker">小主题</p>
+                  <h2>{topic.label}</h2>
+                </div>
+                <span>{topic.posts.length} 篇</span>
+              </header>
+              <p class="wiki-topic-description">{topic.description}</p>
+              <ol class="wiki-entry-list">
+                {topic.posts.map((post) => (
+                  <li>
+                    <div class="wiki-entry-marker" aria-hidden="true"></div>
+                    <div>
+                      <a class="wiki-entry-title" href={`/${post.id}/`}>
+                        {post.data.title}
+                      </a>
+                      <p>{post.data.description}</p>
+                      <small>
+                        {formatDate(post.data.updated ?? post.data.date)}
+                        {post.data.tags.length > 0 && ` · ${post.data.tags.join('、')}`}
+                      </small>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          ))}
+          {loosePosts.length > 0 && (
+            <section class="wiki-topic-group" id="other">
+              <header class="wiki-topic-header">
+                <div>
+                  <p class="wiki-kicker">小主题</p>
+                  <h2>其他记录</h2>
+                </div>
+                <span>{loosePosts.length} 篇</span>
+              </header>
+              <ol class="wiki-entry-list">
+                {loosePosts.map((post) => (
+                  <li>
+                    <div class="wiki-entry-marker" aria-hidden="true"></div>
+                    <div>
+                      <a class="wiki-entry-title" href={`/${post.id}/`}>
+                        {post.data.title}
+                      </a>
+                      <p>{post.data.description}</p>
+                      <small>
+                        {formatDate(post.data.updated ?? post.data.date)}
+                        {post.data.tags.length > 0 && ` · ${post.data.tags.join('、')}`}
+                      </small>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          )}
+        </div>
       ) : (
         <ol class="wiki-entry-list">
           {posts.map((post) => {
-            const slug = post.id.split('/').pop()!;
             return (
               <li>
                 <div class="wiki-entry-marker" aria-hidden="true"></div>
                 <div>
-                  <a class="wiki-entry-title" href={`/${post.data.section}/${slug}/`}>
+                  <a class="wiki-entry-title" href={`/${post.id}/`}>
                     {post.data.title}
                   </a>
                   <p>{post.data.description}</p>
