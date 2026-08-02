@@ -6,49 +6,196 @@ date: 2026-08-02
 tags: [Git, 工程实践, 版本控制]
 ---
 
-我以前记 Git 命令，常常是一条命令对应一个操作。命令一多，状态就容易混乱。后来我发现，更稳妥的理解方式不是背命令，而是先看清文件在三个区域之间怎样移动。
+# git
 
-## 三个区域
 
-- **工作区**：我正在编辑、尚未确认的内容。
-- **暂存区**：我准备纳入下一次提交的快照。
-- **版本库**：已经提交、可以追溯的历史。
+Git能实现把三个有独立提交的仓库合并成一个仓库
 
-于是常见操作就容易解释了：
+流程：
+先删除过去的
 
-```text
-工作区 --git add--> 暂存区 --git commit--> 版本库
-版本库 --git restore/checkout--> 工作区
+     然后
+ clone
+
+
+
+     然后
+ subtree
+
+
+
+
+```
+git add -A
+git commit -m "Remove"
+git remote remove starter
+
 ```
 
-`git status` 是我最常用的“仪表盘”。遇到问题时，我先问三个问题：文件是否被跟踪、改动是否进入暂存区、当前分支指向哪个提交。这样比直接尝试撤销命令安全得多。
 
-## 嵌套仓库为什么麻烦
 
-如果把一个自带 `.git` 的项目直接复制进另一个仓库，外层 Git 往往只把它看成一个独立仓库入口，而不是普通目录。此时贸然删除内层 `.git` 虽然能让文件被外层接管，却会丢失内层项目的提交历史。
 
-当我确实希望把它永久并入主项目，并保留历史时，可以使用 `git subtree`：
+```
+mv subproject ../subproject-src
+git remote add subproject-src ../subproject-src
+cd ~/main-project
+git add -A
+git commit -m "Remove subproject gitlink, will re-add via subtree"
+git fetch subproject-src
+git subtree add --prefix=subproject subproject-src main
 
-```bash
-git remote add component <repository-url>
-git fetch component
-git subtree add --prefix=components/component component main
 ```
 
-这会把另一个仓库的内容放到指定子目录，并把历史带进来。若只关心最终代码、不需要完整历史，可增加 `--squash`，把导入压成一次提交。
 
-后续同步也有明确方向：
 
-```bash
-git subtree pull --prefix=components/component component main
-git subtree push --prefix=components/component component main
+
+
+     新建了
+ GitHub仓库直接push
+
+
+```
+cd ~/main-project
+git remote add origin https://github.com/[用户]/[仓库].git
+git push -u origin main
+
 ```
 
-## 我现在的处理顺序
 
-1. 用 `git status` 和 `git rev-parse --show-toplevel` 确认自己在哪个仓库。
-2. 查看目标目录里是否另有 `.git`，避免误把子仓库当普通文件夹。
-3. 决定是保留独立性、使用 submodule，还是永久合并、使用 subtree。
-4. 先在新分支上操作，检查提交历史和目录结构，再合并回主线。
+## 详细说删除
 
-Git 的难点不在命令数量，而在状态。只要先弄清三个区域和仓库边界，大多数“代码怎么不见了”都会变成一个可以逐步定位的问题。
+好的，把整个"删除→提交"流程按 Git 的三个区（工作区 / 暂存区 / 仓库）拆开讲清楚。
+
+Git 的三个区
+
+工作区(Working Directory)  →  暂存区(Index/Staging)  →  仓库(Repository/.git)
+       磁盘上的文件              git add 之后的快照          git commit 之后的历史
+
+
+     **第**
+  **0 步之前的状态**
+
+subproject 三个区里都一致：都存在，且在仓库里是一个 gitlink（因为它带着自己的 .git）。
+
+
+```
+工作区: subproject/ (真实文件夹，含嵌套 .git)
+暂存区: subproject  (gitlink 记录)
+仓库:   subproject  (gitlink 记录，在 HEAD 指向的 commit 里)
+
+```
+
+
+第 1 步：mv subproject ../subproject-src
+
+这纯粹是文件系统操作，Git 完全不知情。结果是：
+
+工作区: subproject 不存在了（挪走了）
+暂存区: subproject  ← 还在（没变）
+仓库:   subproject  ← 还在（没变）
+
+工作区 ≠ 暂存区，出现了差异。
+
+第 2 步：git status
+
+Git 对比三个区，发现"暂存区有、工作区没有" → 判定为一处未暂存的删除，显示：
+
+Changes not staged for commit:
+    deleted: subproject
+
+（就是你之前看到的 D subproject）
+
+第 3 步：git add -A
+
+把工作区的当前状态（"这里已经没有这个东西了"）同步进暂存区：
+
+工作区: subproject 不存在
+暂存区: subproject 也被移除了   ← 变化发生在这里
+仓库:   subproject  ← 还在（没变，等着被 commit 更新）
+
+现在暂存区和仓库不一致了，git status 会显示：
+
+Changes to be committed:
+    deleted: subproject
+
+这一步只是"记录意图"，还没写进历史。
+
+第 4 步：git commit
+
+Git 拿暂存区当前的完整快照，打包成一个新的 commit 对象，让 HEAD 指向它：
+
+仓库历史: ... → [旧commit: 含 subproject] → [新commit: 不含 subproject] ← HEAD
+
+三个区现在重新一致（都不含它）。
+
+关键点：旧 commit 毫发无损
+
+git log 依然能看到之前那个 commit，用
+
+git show <旧commit哈希>:subproject
+
+依然能取出当时的记录。"删除"只是新快照里不包含它，不是把历史抹除——这也是为什么 Git 里几乎没有真正意义的"删除历史"，只有"新增一个不包含它的快照"。
+
+之后为什么 subtree add 能跑了
+
+git subtree add 要求三个区完全一致（working tree clean）。经过 add -A + commit，三个区都不再含 subproject 这个旧的 gitlink 了，所以命令能顺利往这个路径下重新创建一份真正带文件历史的子目录。
+
+
+### 详解三条命令
+1. mv subproject ../subproject-src
+
+纯文件系统操作，把整个文件夹（包括它自带的 .git，也就是完整的 11 个 commit 历史）从
+
+~/main-project/subproject
+
+挪到
+
+~/subproject-src        （.. 就是 main-project 的上一级，也就是 ~/）
+
+关键：这个文件夹自己的 git 仓库完好无损，只是换了个磁盘位置。之所以要挪走，是因为 subproject 这个路径接下来要让 subtree add 重新创建——而 subtree 要求目标路径当前必须是空的/不存在，不能有旧东西占着。
+
+---
+2. git fetch subproject-src
+
+这里 subproject-src 不是网址，是你之前用
+
+git remote add subproject-src ../subproject-src
+
+注册的一个 remote 名字，它指向的地址就是本地路径 ../subproject-src（也就是刚才挪过去的那个仓库）。
+
+Git 支持本地路径当 remote，原理和 GitHub 一样，只是"服务器"就是你磁盘上的另一个 .git。git fetch subproject-src 做的事：
+
+1. 连接到 ../subproject-src 这个仓库
+2. 把它里面 main-project 当前没有的 commit / tree / blob 对象，全部拷贝进 main-project/.git/objects
+3. 在本地建一个远程跟踪分支 subproject-src/main，指向那边 main 的最新 commit
+
+你看到的输出：
+* [new branch]      main       -> subproject-src/main
+就是在说"我在本地新建了一个跟踪引用 subproject-src/main，指向刚拉下来的历史"。
+
+注意：这一步只是把数据搬进你的仓库、建个引用，并没有改动你的工作区或 main 分支，纯粹是准备数据。
+
+---
+3. git subtree add --prefix=subproject subproject-src main
+
+这是最关键的一步，git subtree（contrib 工具，本质是一系列 git 命令的封装脚本）在背后做的事情：
+
+(1) 重写路径：拿到 subproject-src/main 的整条历史（11 个 commit），对每一个 commit 生成一个新的"影子 commit"——内容一模一样，只是把所有文件从仓库根目录挪到 subproject/ 前缀下。比如原来 README.md，影子历史里变成 subproject/README.md。
+
+(2) 执行一次真正的 merge：把这条重写后的历史，合并进你当前的 main 分支，生成一个 merge commit，这个 commit 有两个父节点：
+
+        ┌── 你当前的 main (main-project 自己的历史)
+merge ──┤
+        └── 重写后的 subproject-src 历史（路径已经在 subproject/ 下）
+
+(3) 落地到工作区：merge 完成后，subproject/ 这个文件夹连同所有文件重新出现在你的工作目录里——但这次不再是 gitlink（一个指针），而是真正被主仓库追踪的普通文件，同时保留了完整的历史轨迹。
+
+之后你可以验证：
+
+git log subproject/          # 能看到原来那 11 条 commit
+git log --graph --oneline -15        # 能看到刚才那次 merge 的分叉结构
+
+---
+为什么要分成"先 fetch 再 subtree add"两步，而不是一步到位？
+
+git subtree add 其实也能直接接受一个仓库 URL/远程名 + 分支自动帮你 fetch，但分开写的好处是：如果 fetch 阶段网络或路径出错，报错信息更清楚，你能先确认 subproject-src/main 确实拉下来了，再执行有一定"重量"的 subtree 操作，出问题时更容易定位是哪一步的锅。

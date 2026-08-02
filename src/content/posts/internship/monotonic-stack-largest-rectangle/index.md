@@ -6,51 +6,46 @@ date: 2026-08-02
 tags: [算法, 单调栈, 柱状图]
 ---
 
-柱状图最大矩形的直接做法是：以每根柱子为最低高度，向左右扩展直到遇到更矮柱子。重复扫描会达到 `O(n²)`。单调栈的作用，是在一次遍历中为柱子找到左右第一个更矮的位置。
+# Leetcode84 最大矩形
 
-## 栈里保存什么
 
-维护一个高度单调递增的下标栈。当新柱子比栈顶更矮，说明栈顶柱子向右扩展的边界已经确定，可以结算它作为最低高度的最大矩形。
+我先讲讲我对这个题最初的看法。我首先觉得它很像“接雨水”，然后自然而然想到双指针，结果发现不是双指针，而是滑动窗口。接下来我觉得它能优化到 O(n)，但我一直在想，就先用 O(n) 的做法去做。
 
-弹出下标 `mid` 后：
+这种问题的一种显然做法是用 O(n^3) 写，当然是可以的，但显然不行对吧？首先 i 到 j 跑一轮，一个 i 循环是一层，然后内部的 j 再跑一轮是第 2 层，第 3 层是找到 i、j 之间的最小值。
 
-- 右边第一个更矮位置是当前下标 `i`；
-- 左边第一个更矮位置是弹栈后的新栈顶；
-- 宽度为 `i - stack.top() - 1`。
+我觉得用 ON 方的话，就是 IG 跑一个二重循环，然后再直接写那个内部的最小值，可以用前缀和维护一下。
 
-## 用哨兵统一边界
 
-```cpp
-int largestRectangleArea(vector<int>& heights) {
-    vector<int> h;
-    h.reserve(heights.size() + 2);
-    h.push_back(0);
-    h.insert(h.end(), heights.begin(), heights.end());
-    h.push_back(0);
-
-    stack<int> st;
-    st.push(0);
-    long long ans = 0;
-
-    for (int i = 1; i < static_cast<int>(h.size()); ++i) {
-        while (h[st.top()] > h[i]) {
-            int mid = st.top();
+```
+class Solution {
+public:
+    int largestRectangleArea(vector<int>& heights) {
+        stack<int> st;
+        int n=heights.size();
+        int maxArea=0;
+        for(int i=0;i<n;i++){
+          while(!st.empty() && heights[i]<heights[st.top()]){
+            int h=heights[st.top()];
             st.pop();
-            long long width = i - st.top() - 1;
-            ans = max(ans, width * h[mid]);
+            int left=st.empty() ? -1:st.top();
+            maxArea=max(maxArea,h*(i-left-1));
+          }
+          st.push(i);
         }
-        st.push(i);
+        while(!st.empty()){
+          int h=heights[st.top()];
+          st.pop();
+          int left=st.empty()? -1:st.top();
+          maxArea=max(maxArea,h*(n-left-1));
+        }
+        return maxArea;
     }
-    return static_cast<int>(ans);
-}
+};
+
 ```
 
-左侧零哨兵保证弹栈后仍有边界，右侧零哨兵迫使所有未结算柱子出栈，因此不需要循环结束后的额外清理。
 
-这里使用严格的 `>`。相等高度可以同时留在栈中，较早的柱子最终获得更宽范围；也可以设计成遇到相等就合并，但边界公式必须与策略一致。
 
-## 用一个例子理解宽度
+这就是用单调栈写的这个做法。这个栈维护的是一个下标，然后栈顶就是说你当前的这个高度。
 
-对于高度 `[2, 1, 5, 6, 2, 3]`，读到第二个 `2` 时，`6` 和 `5` 依次出栈。高度 `5` 出栈后，新栈顶指向左侧高度 `1`，当前下标是右侧高度 `2`，中间两根柱子都至少有高度 `5`，面积为 `5 × 2`。
-
-单调栈题的共同问题不是“怎样写栈”，而是：一个元素什么时候得到足够信息，可以被永久结算？把这个时刻和左右边界说清楚，代码就会从模板变成可推导的方法。
+这个题还是有点难做，这题我再想想，我再出一个解法吧
