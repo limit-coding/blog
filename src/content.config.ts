@@ -11,7 +11,7 @@ const posts = defineCollection({
     z.object({
       title: z.string(),
       description: z.string(),
-      section: z.enum(['courses', 'self-study', 'tech', 'philosophy', 'history', 'internship', 'learning', 'drone']),
+      section: z.enum(['courses', 'self-study', 'tech', 'philosophy', 'history', 'internship', 'learning', 'drone', 'electronics', 'biography']),
       date: z.coerce.date(),
       updated: z.coerce.date().optional(),
       tags: z.array(z.string()).default([]),

@@ -1,7 +1,7 @@
 export const SITE_TITLE = 'learnpath';
-export const SITE_DESCRIPTION = '学习路径上的笔记：课程、自学、技术、方法与历史。';
+export const SITE_DESCRIPTION = '学习路径上的笔记：课程、自学、技术、项目、方法与成长记录。';
 
-export type SectionSlug = 'courses' | 'self-study' | 'tech' | 'philosophy' | 'history' | 'internship' | 'learning' | 'drone';
+export type SectionSlug = 'courses' | 'self-study' | 'tech' | 'philosophy' | 'history' | 'internship' | 'learning' | 'drone' | 'electronics' | 'biography';
 
 export interface SectionMeta {
   slug: SectionSlug;
@@ -18,6 +18,8 @@ export const SECTIONS: SectionMeta[] = [
   { slug: 'internship', label: 'Agent 实习', description: 'Agent 开发实战记录与学习笔记' },
   { slug: 'learning', label: '学习论与学习方法', description: '关于学习本身的研究：疲劳、方法、动力与系统重建' },
   { slug: 'drone', label: '无人机项目', description: '无人机竞赛项目：视觉识别、串口协议与系统调试' },
+  { slug: 'electronics', label: '电赛通信', description: '电子设计竞赛中的信号、FPGA、视觉控制与系统联调' },
+  { slug: 'biography', label: '个人传记', description: '技术成长、选择与阶段复盘' },
 ];
 
 export function getSectionMeta(slug: string): SectionMeta | undefined {
