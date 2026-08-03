@@ -1,0 +1,46 @@
+---
+import ThemeToggle from '../components/ThemeToggle.astro';
+import { SITE_TITLE } from '../consts';
+import '../styles/writer.css';
+import 'katex/dist/katex.min.css';
+import 'highlight.js/styles/github.css';
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const {
+  title = '写作台',
+  description = 'Markdown 自动排版、实时预览与本地草稿保存',
+} = Astro.props;
+---
+
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="generator" content={Astro.generator} />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>{title} — {SITE_TITLE}</title>
+    <meta name="description" content={description} />
+    <script is:inline>
+      (function () {
+        const saved = localStorage.getItem('theme');
+        if (saved) document.documentElement.dataset.theme = saved;
+      })();
+    </script>
+  </head>
+  <body class="writer-page">
+    <a class="writer-skip-link" href="#markdown-editor">跳到编辑器</a>
+    <slot name="header" />
+    <main>
+      <slot />
+    </main>
+    <div class="writer-theme-toggle">
+      <ThemeToggle />
+    </div>
+  </body>
+</html>
