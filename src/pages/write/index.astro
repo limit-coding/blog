@@ -36,12 +36,14 @@ const today = new Date().toLocaleDateString('en-CA');
     </div>
 
     <div class="writer-actions">
+      <button class="writer-text-button writer-library-button" id="open-post-library" type="button">文章库</button>
       <button class="writer-text-button" id="new-draft" type="button">新建</button>
       <button class="writer-text-button" id="copy-markdown" type="button">复制</button>
       <button class="writer-text-button writer-settings-button" id="toggle-settings" type="button" aria-expanded="false">
         设置
       </button>
-      <button class="writer-primary-button" id="download-markdown" type="button">导出 .md</button>
+      <button class="writer-text-button" id="download-markdown" type="button">导出 .md</button>
+      <button class="writer-primary-button" id="publish-article" type="button">发布上线</button>
     </div>
   </header>
 
@@ -225,8 +227,14 @@ const today = new Date().toLocaleDateString('en-CA');
         </section>
 
         <section class="writer-path-card" aria-label="导出位置">
-          <span>建议保存到</span>
+          <span id="article-path-label">建议保存到</span>
           <code id="article-path">src/content/posts/tech/your-slug/index.md</code>
+        </section>
+
+        <section class="writer-publish-card" aria-live="polite">
+          <span>GitHub 发布</span>
+          <strong id="writer-publish-state">当前是本地草稿</strong>
+          <a id="writer-publish-link" href="" target="_blank" rel="noreferrer noopener" hidden>查看最近提交</a>
         </section>
 
         <section class="writer-paste-tip">
@@ -236,6 +244,29 @@ const today = new Date().toLocaleDateString('en-CA');
       </aside>
     </div>
   </div>
+
+  <dialog class="writer-library-dialog" id="writer-library-dialog" aria-labelledby="writer-library-title">
+    <div class="writer-library-shell">
+      <header>
+        <div>
+          <span>GitHub 内容库</span>
+          <h2 id="writer-library-title">以前写过的文章</h2>
+        </div>
+        <button id="close-post-library" type="button" aria-label="关闭文章库">×</button>
+      </header>
+
+      <div class="writer-library-controls">
+        <label class="sr-only" for="writer-library-search">搜索文章</label>
+        <input id="writer-library-search" type="search" placeholder="搜索标题、摘要、分类或路径" autocomplete="off" />
+        <button id="refresh-post-library" type="button">刷新</button>
+      </div>
+
+      <p class="writer-library-status" id="writer-library-status" role="status" aria-live="polite">
+        正在读取文章索引…
+      </p>
+      <div class="writer-library-list" id="writer-library-list" role="list"></div>
+    </div>
+  </dialog>
 
   <dialog class="writer-ai-dialog" id="writer-ai-dialog" aria-labelledby="writer-ai-dialog-title">
     <form id="writer-ai-settings-form">

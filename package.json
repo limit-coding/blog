@@ -9,7 +9,7 @@
     "dev": "astro dev",
     "dev:writer": "astro dev --config astro.writer.config.mjs",
     "build": "astro build",
-    "build:writer": "astro build --config astro.writer.config.mjs",
+    "build:writer": "node scripts/generate-writer-post-index.mjs && astro build --config astro.writer.config.mjs",
     "preview": "astro preview",
     "preview:writer": "astro preview --config astro.writer.config.mjs",
     "astro": "astro"
@@ -20,14 +20,17 @@
     "astro": "^7.0.0",
     "dompurify": "^3.4.12",
     "highlight.js": "^11.11.1",
+    "jose": "^6.2.8",
     "katex": "^0.18.1",
     "marked": "^18.0.7",
     "rehype-katex": "^7.0.1",
     "remark-math": "^6.0.0",
     "turndown": "^7.2.4",
-    "turndown-plugin-gfm": "^1.0.2"
+    "turndown-plugin-gfm": "^1.0.2",
+    "yaml": "^2.9.0"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260804.1",
     "@types/katex": "^0.16.8",
     "@types/turndown": "^5.0.6",
     "typescript": "^5.9.3"

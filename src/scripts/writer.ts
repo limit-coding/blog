@@ -14,6 +14,7 @@ import xml from 'highlight.js/lib/languages/xml';
 import yaml from 'highlight.js/lib/languages/yaml';
 import katex from 'katex';
 import { marked } from 'marked';
+import { parse as parseYaml } from 'yaml';
 import {
   convertRichTextToMarkdown,
   formatPlainText,
@@ -67,6 +68,42 @@ interface DraftData {
   draft: boolean;
   content: string;
   updatedAt: number;
+  remotePath?: string;
+  remoteSha?: string;
+}
+
+interface WriterPostSummary {
+  path: string;
+  format: 'md' | 'mdx';
+  slug: string;
+  title: string;
+  description: string;
+  section: string;
+  date: string;
+  updated: string;
+  draft: boolean;
+}
+
+interface WriterPostIndex {
+  generatedAt: string;
+  posts: WriterPostSummary[];
+}
+
+interface RemotePostResponse {
+  path?: string;
+  sha?: string;
+  content?: string;
+  htmlUrl?: string;
+  error?: string;
+}
+
+interface PublishResponse {
+  path?: string;
+  sha?: string;
+  commitSha?: string;
+  commitUrl?: string;
+  message?: string;
+  error?: string;
 }
 
 interface FormulaToken {
@@ -142,6 +179,14 @@ const outline = requiredElement<HTMLElement>('#writer-outline');
 const saveState = requiredElement<HTMLElement>('#save-state');
 const editorPosition = requiredElement<HTMLElement>('#editor-position');
 const articlePath = requiredElement<HTMLElement>('#article-path');
+const articlePathLabel = requiredElement<HTMLElement>('#article-path-label');
+const publishButton = requiredElement<HTMLButtonElement>('#publish-article');
+const publishState = requiredElement<HTMLElement>('#writer-publish-state');
+const publishLink = requiredElement<HTMLAnchorElement>('#writer-publish-link');
+const libraryDialog = requiredElement<HTMLDialogElement>('#writer-library-dialog');
+const librarySearch = requiredElement<HTMLInputElement>('#writer-library-search');
+const libraryStatus = requiredElement<HTMLElement>('#writer-library-status');
+const libraryList = requiredElement<HTMLElement>('#writer-library-list');
 const stats = {
   words: requiredElement<HTMLElement>('#stat-words'),
   reading: requiredElement<HTMLElement>('#stat-reading'),
@@ -160,6 +205,10 @@ let writerAIConfig = loadWriterAIConfig();
 let writerAIStorage: 'local' | 'session' | undefined = getWriterAIStorage();
 let pendingAIAction: WriterAIAction | undefined;
 let aiRequestController: AbortController | undefined;
+let currentRemotePath: string | undefined;
+let currentRemoteSha: string | undefined;
+let libraryPosts: WriterPostSummary[] = [];
+let libraryLoaded = false;
 
 function loadDraft(): DraftData {
   try {
@@ -185,6 +234,8 @@ function getDraft(): DraftData {
     draft: draftInput.checked,
     content: editor.value,
     updatedAt: Date.now(),
+    remotePath: currentRemotePath,
+    remoteSha: currentRemoteSha,
   };
 }
 
@@ -198,6 +249,8 @@ function applyDraft(draft: DraftData): void {
   coverInput.value = draft.cover;
   draftInput.checked = draft.draft;
   editor.value = draft.content;
+  currentRemotePath = draft.remotePath;
+  currentRemoteSha = draft.remoteSha;
   slugWasEdited = Boolean(draft.slug);
   resizeTextArea(titleInput);
   resizeTextArea(descriptionInput);
@@ -403,7 +456,9 @@ function renderPreview(): void {
   stats.words.textContent = words.toLocaleString('zh-CN');
   stats.reading.textContent = `${words === 0 ? 0 : Math.max(1, Math.ceil(words / 400))} 分钟`;
   stats.paragraphs.textContent = paragraphs.toString();
-  articlePath.textContent = `src/content/posts/${sectionInput.value}/${slugInput.value.trim() || 'your-slug'}/index.md`;
+  const generatedPath = `src/content/posts/${sectionInput.value}/${slugInput.value.trim() || 'your-slug'}/index.md`;
+  articlePath.textContent = currentRemotePath || generatedPath;
+  articlePathLabel.textContent = currentRemotePath ? '正在编辑 GitHub 文章' : '新文章将保存到';
   renderMarkdown(body);
 }
 
@@ -679,6 +734,7 @@ function generateMarkdownDocument(): string {
     `date: ${draft.date || new Date().toLocaleDateString('en-CA')}`,
     `tags: [${tagValues}]`,
   ];
+  if (currentRemotePath) lines.push(`updated: ${new Date().toLocaleDateString('en-CA')}`);
   if (draft.cover) lines.push(`cover: ${yamlString(draft.cover)}`);
   lines.push(`draft: ${draft.draft}`, '---', '', draft.content.trimEnd(), '');
   return lines.join('\n');
@@ -712,6 +768,205 @@ function downloadMarkdown(): void {
   setSaveMessage('index.md 已导出', 'saved');
 }
 
+function updatePublishState(message?: string, commitUrl?: string): void {
+  publishState.textContent = message || (currentRemotePath ? '已连接 GitHub 文章' : '当前是本地草稿');
+  if (commitUrl) {
+    publishLink.href = commitUrl;
+    publishLink.hidden = false;
+  } else {
+    publishLink.removeAttribute('href');
+    publishLink.hidden = true;
+  }
+}
+
+function sectionLabel(slug: string): string {
+  return [...sectionInput.options].find((option) => option.value === slug)?.textContent || slug;
+}
+
+function renderPostLibrary(): void {
+  const query = librarySearch.value.trim().toLocaleLowerCase('zh-CN');
+  const filtered = query
+    ? libraryPosts.filter((post) => [post.title, post.description, post.section, post.slug, post.path]
+      .some((value) => value.toLocaleLowerCase('zh-CN').includes(query)))
+    : libraryPosts;
+
+  libraryList.replaceChildren();
+  libraryStatus.textContent = `共 ${libraryPosts.length} 篇，当前显示 ${filtered.length} 篇`;
+  for (const post of filtered) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.dataset.postPath = post.path;
+    button.setAttribute('role', 'listitem');
+    if (post.path === currentRemotePath) button.dataset.active = 'true';
+
+    const heading = document.createElement('span');
+    heading.className = 'writer-library-item-heading';
+    const title = document.createElement('strong');
+    title.textContent = post.title;
+    heading.append(title);
+    if (post.draft) {
+      const badge = document.createElement('em');
+      badge.textContent = '草稿';
+      heading.append(badge);
+    }
+
+    const description = document.createElement('small');
+    description.textContent = post.description || post.path;
+    const meta = document.createElement('span');
+    meta.className = 'writer-library-item-meta';
+    meta.textContent = `${sectionLabel(post.section)} · ${post.updated || post.date || '未标日期'} · ${post.format.toUpperCase()}`;
+    button.append(heading, description, meta);
+    libraryList.append(button);
+  }
+  if (filtered.length === 0) {
+    const empty = document.createElement('p');
+    empty.className = 'writer-library-empty';
+    empty.textContent = '没有找到匹配的文章。';
+    libraryList.append(empty);
+  }
+}
+
+async function loadPostLibrary(force = false): Promise<void> {
+  if (libraryLoaded && !force) {
+    renderPostLibrary();
+    return;
+  }
+  libraryStatus.textContent = '正在读取文章索引…';
+  libraryList.replaceChildren();
+  try {
+    const response = await fetch(`/posts-index.json${force ? `?t=${Date.now()}` : ''}`, {
+      cache: 'no-store',
+      credentials: 'same-origin',
+    });
+    if (!response.ok) throw new Error('文章库仅在独立写作域名中可用');
+    const payload = await response.json() as WriterPostIndex;
+    libraryPosts = Array.isArray(payload.posts) ? payload.posts : [];
+    libraryLoaded = true;
+    renderPostLibrary();
+  } catch (error) {
+    libraryStatus.textContent = error instanceof Error ? error.message : '文章索引读取失败';
+  }
+}
+
+async function responsePayload<T extends { error?: string }>(response: Response): Promise<T> {
+  try {
+    return await response.json() as T;
+  } catch {
+    return { error: `服务器返回了无法识别的响应（HTTP ${response.status}）` } as T;
+  }
+}
+
+function parseRemoteDocument(content: string, path: string, sha: string): DraftData {
+  const match = content.match(/^---\s*\n([\s\S]*?)\n---\s*(?:\n|$)/);
+  if (!match) throw new Error('这篇文章缺少可识别的 Frontmatter');
+  const data = parseYaml(match[1]) as Record<string, unknown> | null;
+  if (!data || typeof data !== 'object') throw new Error('这篇文章的 Frontmatter 无法解析');
+  const pathSegments = path.split('/');
+  const tags = Array.isArray(data.tags) ? data.tags.map(String).join(', ') : '';
+  const date = data.date instanceof Date
+    ? data.date.toLocaleDateString('en-CA')
+    : String(data.date || new Date().toLocaleDateString('en-CA')).slice(0, 10);
+  const requestedSection = String(data.section || 'tech');
+  const section = [...sectionInput.options].some((option) => option.value === requestedSection)
+    ? requestedSection
+    : 'tech';
+  return {
+    version: 1,
+    title: String(data.title || '未命名文章'),
+    description: String(data.description || ''),
+    section,
+    slug: pathSegments.at(-2) || '',
+    date,
+    tags,
+    cover: typeof data.cover === 'string' ? data.cover : '',
+    draft: data.draft === true,
+    content: content.slice(match[0].length).replace(/^\n+/, ''),
+    updatedAt: Date.now(),
+    remotePath: path,
+    remoteSha: sha,
+  };
+}
+
+async function loadRemotePost(path: string): Promise<void> {
+  if (path !== currentRemotePath && (titleInput.value.trim() || editor.value.trim())) {
+    const confirmed = window.confirm('加载文章会替换当前编辑区。未发布内容请先导出备份，确定继续吗？');
+    if (!confirmed) return;
+  }
+  libraryStatus.textContent = '正在从 GitHub 加载文章…';
+  try {
+    const response = await fetch(`/api/posts?path=${encodeURIComponent(path)}`, {
+      credentials: 'same-origin',
+      headers: { Accept: 'application/json' },
+    });
+    const payload = await responsePayload<RemotePostResponse>(response);
+    if (!response.ok || !payload.content || !payload.sha) {
+      throw new Error(payload.error || `文章加载失败（HTTP ${response.status}）`);
+    }
+    applyDraft(parseRemoteDocument(payload.content, payload.path || path, payload.sha));
+    renderPreview();
+    saveDraft();
+    updateEditorPosition();
+    updatePublishState('已从 GitHub 加载，可以编辑后重新发布');
+    libraryDialog.close();
+    setSettings(false);
+    showSmartFormatNotice('文章已从 GitHub 加载到编辑区');
+  } catch (error) {
+    libraryStatus.textContent = error instanceof Error ? error.message : '文章加载失败';
+  }
+}
+
+async function publishArticle(): Promise<void> {
+  const title = titleInput.value.trim();
+  const description = descriptionInput.value.trim();
+  const slug = slugInput.value.trim();
+  if (!title || !description || !slug || !editor.value.trim()) {
+    showSmartFormatNotice('发布前请填写标题、摘要、路径名和正文');
+    return;
+  }
+  const path = currentRemotePath || `src/content/posts/${sectionInput.value}/${slug}/index.md`;
+  const confirmed = window.confirm(
+    `将直接提交到 GitHub main 分支并触发网站自动上线。\n\n${path}\n\n确定发布吗？`,
+  );
+  if (!confirmed) return;
+
+  draftInput.checked = false;
+  publishButton.disabled = true;
+  publishButton.textContent = '发布中…';
+  updatePublishState('正在提交 GitHub…');
+  try {
+    const response = await fetch('/api/posts', {
+      method: 'PUT',
+      credentials: 'same-origin',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        path,
+        content: generateMarkdownDocument(),
+        sha: currentRemoteSha,
+      }),
+    });
+    const payload = await responsePayload<PublishResponse>(response);
+    if (!response.ok || !payload.sha) {
+      throw new Error(payload.error || `发布失败（HTTP ${response.status}）`);
+    }
+    currentRemotePath = payload.path || path;
+    currentRemoteSha = payload.sha;
+    renderPreview();
+    saveDraft();
+    updatePublishState('已提交 GitHub，网站正在自动部署', payload.commitUrl);
+    showSmartFormatNotice('发布成功：GitHub 已接收修改，网站正在自动部署');
+    libraryLoaded = false;
+  } catch (error) {
+    updatePublishState(error instanceof Error ? error.message : '发布失败');
+    showSmartFormatNotice(error instanceof Error ? error.message : '发布失败');
+  } finally {
+    publishButton.disabled = false;
+    publishButton.textContent = '发布上线';
+  }
+}
+
 function setView(view: 'edit' | 'split' | 'preview'): void {
   app.dataset.view = view;
   for (const button of document.querySelectorAll<HTMLButtonElement>('[data-view-mode]')) {
@@ -738,12 +993,15 @@ function resetDraft(): void {
     content: '',
     date: new Date().toLocaleDateString('en-CA'),
     updatedAt: Date.now(),
+    remotePath: undefined,
+    remoteSha: undefined,
   };
   applyDraft(emptyDraft);
   slugWasEdited = false;
   localStorage.removeItem(STORAGE_KEY);
   renderPreview();
   saveDraft();
+  updatePublishState();
   titleInput.focus();
 }
 
@@ -756,6 +1014,7 @@ setView(window.matchMedia('(max-width: 820px)').matches && initialView === 'spli
 renderPreview();
 updateEditorPosition();
 updateWriterAIState();
+updatePublishState();
 
 for (const input of [titleInput, descriptionInput, editor, sectionInput, dateInput, tagsInput, coverInput, draftInput]) {
   input.addEventListener('input', () => {
@@ -805,9 +1064,26 @@ requiredElement<HTMLButtonElement>('#toggle-settings').addEventListener('click',
   setSettings(app.dataset.settings !== 'open');
 });
 requiredElement<HTMLButtonElement>('#close-settings').addEventListener('click', () => setSettings(false));
+requiredElement<HTMLButtonElement>('#open-post-library').addEventListener('click', () => {
+  libraryDialog.showModal();
+  void loadPostLibrary();
+  window.setTimeout(() => librarySearch.focus(), 0);
+});
+requiredElement<HTMLButtonElement>('#close-post-library').addEventListener('click', () => libraryDialog.close());
+requiredElement<HTMLButtonElement>('#refresh-post-library').addEventListener('click', () => void loadPostLibrary(true));
+librarySearch.addEventListener('input', renderPostLibrary);
+libraryList.addEventListener('click', (event) => {
+  const target = event.target as HTMLElement;
+  const button = target.closest<HTMLButtonElement>('[data-post-path]');
+  if (button?.dataset.postPath) void loadRemotePost(button.dataset.postPath);
+});
+libraryDialog.addEventListener('click', (event) => {
+  if (event.target === libraryDialog) libraryDialog.close();
+});
 requiredElement<HTMLButtonElement>('#new-draft').addEventListener('click', resetDraft);
 requiredElement<HTMLButtonElement>('#copy-markdown').addEventListener('click', copyMarkdown);
 requiredElement<HTMLButtonElement>('#download-markdown').addEventListener('click', downloadMarkdown);
+publishButton.addEventListener('click', () => void publishArticle());
 requiredElement<HTMLButtonElement>('#undo-smart-format').addEventListener('click', undoSmartFormat);
 requiredElement<HTMLButtonElement>('#ai-polish').addEventListener('click', () => runWriterAI('polish'));
 requiredElement<HTMLButtonElement>('#ai-summary').addEventListener('click', () => runWriterAI('summary'));
