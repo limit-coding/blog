@@ -415,6 +415,16 @@ input[type='checkbox'] {
   color: var(--writer-accent-hover);
 }
 
+.writer-toolbar .writer-ai-button {
+  color: var(--writer-accent);
+  font-weight: 700;
+}
+
+.writer-toolbar .writer-ai-button:disabled {
+  cursor: wait;
+  opacity: 0.45;
+}
+
 .writer-smart-notice {
   position: absolute;
   z-index: 5;
@@ -445,6 +455,60 @@ input[type='checkbox'] {
   background: transparent;
   font-weight: 700;
   white-space: nowrap;
+}
+
+.writer-ai-progress {
+  position: absolute;
+  z-index: 6;
+  right: 50%;
+  bottom: 2.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  min-height: 40px;
+  max-width: calc(100% - 2rem);
+  padding: 0.55rem 1rem;
+  border: 1px solid var(--writer-line-strong);
+  border-radius: 7px;
+  color: var(--writer-muted);
+  background: color-mix(in srgb, var(--writer-paper) 94%, transparent);
+  backdrop-filter: blur(12px);
+  font-size: 0.72rem;
+  box-shadow: 0 8px 28px rgba(24, 27, 23, 0.14);
+  transform: translateX(50%);
+  white-space: nowrap;
+}
+
+.writer-ai-progress[hidden] {
+  display: none;
+}
+
+.writer-ai-progress strong {
+  color: var(--writer-ink);
+  font-size: inherit;
+}
+
+.writer-ai-progress button {
+  padding: 0;
+  border: 0;
+  color: var(--writer-accent);
+  background: transparent;
+  font-size: inherit;
+  font-weight: 700;
+}
+
+.writer-ai-spinner {
+  width: 13px;
+  height: 13px;
+  border: 2px solid var(--writer-line-strong);
+  border-top-color: var(--writer-accent);
+  border-radius: 50%;
+  animation: writer-ai-spin 0.8s linear infinite;
+}
+
+@keyframes writer-ai-spin {
+  to { transform: rotate(360deg); }
 }
 
 .writer-markdown-editor {
@@ -901,6 +965,51 @@ input[type='checkbox'] {
   border-radius: 7px;
 }
 
+.writer-ai-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding: 0.75rem;
+  border: 1px solid var(--writer-line);
+  border-radius: 7px;
+  background: var(--writer-paper);
+}
+
+.writer-ai-card span,
+.writer-ai-card strong {
+  display: block;
+}
+
+.writer-ai-card span {
+  color: var(--writer-faint);
+  font-size: 0.62rem;
+}
+
+.writer-ai-card strong {
+  max-width: 150px;
+  margin-top: 0.15rem;
+  overflow: hidden;
+  color: var(--writer-muted);
+  font-size: 0.65rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.writer-ai-card strong[data-configured='true'] {
+  color: var(--writer-accent);
+}
+
+.writer-ai-card button {
+  padding: 0.28rem 0.55rem;
+  border: 1px solid var(--writer-line);
+  border-radius: 5px;
+  color: var(--writer-ink);
+  background: var(--writer-surface);
+  font-size: 0.65rem;
+}
+
 .writer-path-card span {
   display: block;
   margin-bottom: 0.35rem;
@@ -942,6 +1051,136 @@ input[type='checkbox'] {
   z-index: 50;
   right: 0.75rem;
   bottom: 0.75rem;
+}
+
+.writer-ai-dialog {
+  width: min(calc(100% - 2rem), 480px);
+  max-height: calc(100dvh - 2rem);
+  padding: 0;
+  overflow-y: auto;
+  border: 1px solid var(--writer-line-strong);
+  border-radius: 12px;
+  color: var(--writer-ink);
+  background: var(--writer-paper);
+  box-shadow: 0 30px 90px rgba(17, 20, 16, 0.24);
+}
+
+.writer-ai-dialog::backdrop {
+  background: rgba(18, 21, 17, 0.48);
+  backdrop-filter: blur(3px);
+}
+
+.writer-ai-dialog form {
+  padding: 1.35rem;
+}
+
+.writer-ai-dialog header,
+.writer-ai-dialog footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.writer-ai-dialog header span {
+  color: var(--writer-accent);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.writer-ai-dialog h2 {
+  margin: 0.15rem 0 0;
+  font-family: var(--writer-serif);
+  font-size: 1.35rem;
+}
+
+.writer-ai-dialog header > button {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  color: var(--writer-muted);
+  background: transparent;
+  font-size: 1.4rem;
+}
+
+.writer-ai-security-note {
+  margin: 1rem 0;
+  padding: 0.7rem 0.8rem;
+  border-radius: 7px;
+  color: var(--writer-muted);
+  background: var(--writer-accent-soft);
+  font-size: 0.7rem;
+  line-height: 1.6;
+}
+
+.writer-ai-dialog label {
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 0.8rem;
+  color: var(--writer-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.writer-ai-dialog input {
+  width: 100%;
+  height: 39px;
+  padding: 0 0.7rem;
+  border: 1px solid var(--writer-line);
+  border-radius: 6px;
+  outline: 0;
+  color: var(--writer-ink);
+  background: var(--writer-surface);
+  font-family: var(--writer-mono);
+  font-size: 0.75rem;
+  font-weight: 400;
+}
+
+.writer-ai-dialog input:focus {
+  border-color: var(--writer-accent);
+  box-shadow: 0 0 0 2px var(--writer-accent-soft);
+}
+
+.writer-ai-dialog details {
+  margin-top: 0.9rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--writer-line);
+}
+
+.writer-ai-dialog summary {
+  color: var(--writer-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.writer-ai-dialog details > small {
+  display: block;
+  margin-top: 0.5rem;
+  color: var(--writer-faint);
+  font-size: 0.64rem;
+}
+
+.writer-ai-dialog footer {
+  margin-top: 1.2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--writer-line);
+}
+
+.writer-ai-dialog footer button {
+  height: 36px;
+  padding: 0 0.8rem;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.writer-ai-clear-button {
+  border: 0;
+  color: var(--writer-muted);
+  background: transparent;
 }
 
 .writer-app[data-view='edit'] .writer-preview-pane,

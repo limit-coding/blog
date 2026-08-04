@@ -20,6 +20,12 @@ import {
   shouldSmartFormatPaste,
   type SmartFormatResult,
 } from './smart-format';
+import {
+  DEFAULT_WRITER_AI_CONFIG,
+  requestWriterAI,
+  type WriterAIAction,
+  type WriterAIConfig,
+} from './ai-writer';
 
 hljs.registerLanguage('bash', bash);
 hljs.registerLanguage('shell', bash);
@@ -46,6 +52,7 @@ marked.setOptions({ gfm: true, breaks: false });
 
 const STORAGE_KEY = 'learnpath.writer.draft.v1';
 const VIEW_KEY = 'learnpath.writer.view.v1';
+const AI_SESSION_KEY = 'learnpath.writer.ai-session.v1';
 
 interface DraftData {
   version: 1;
@@ -144,7 +151,13 @@ let saveTimer: number | undefined;
 let renderFrame: number | undefined;
 let slugWasEdited = false;
 let noticeTimer: number | undefined;
-let lastFormatSnapshot: { value: string; start: number; end: number } | undefined;
+let lastFormatSnapshot:
+  | { kind: 'editor'; value: string; start: number; end: number }
+  | { kind: 'description'; value: string }
+  | undefined;
+let writerAIConfig = loadWriterAIConfig();
+let pendingAIAction: WriterAIAction | undefined;
+let aiRequestController: AbortController | undefined;
 
 function loadDraft(): DraftData {
   try {
@@ -437,9 +450,10 @@ function formatSummary(result: SmartFormatResult): string {
   return `${source}，暂未发现明确的标题格式`;
 }
 
-function showSmartFormatNotice(message: string): void {
+function showSmartFormatNotice(message: string, undoable = false): void {
   const notice = requiredElement<HTMLElement>('#writer-smart-notice');
   requiredElement<HTMLElement>('#writer-smart-notice-text').textContent = message;
+  requiredElement<HTMLButtonElement>('#undo-smart-format').hidden = !undoable;
   notice.hidden = false;
   if (noticeTimer) window.clearTimeout(noticeTimer);
   noticeTimer = window.setTimeout(() => {
@@ -448,14 +462,14 @@ function showSmartFormatNotice(message: string): void {
 }
 
 function applyFormattedText(result: SmartFormatResult, start: number, end: number): void {
-  lastFormatSnapshot = { value: editor.value, start, end };
+  lastFormatSnapshot = { kind: 'editor', value: editor.value, start, end };
   const needsPrefix = start > 0 && editor.value[start - 1] !== '\n';
   const needsSuffix = end < editor.value.length && editor.value[end] !== '\n';
   const inserted = `${needsPrefix ? '\n\n' : ''}${result.markdown}${needsSuffix ? '\n\n' : ''}`;
   editor.setRangeText(inserted, start, end, 'end');
   editor.focus();
   notifyInput();
-  showSmartFormatNotice(formatSummary(result));
+  showSmartFormatNotice(formatSummary(result), true);
 }
 
 function autoFormatDocument(): void {
@@ -464,22 +478,132 @@ function autoFormatDocument(): void {
     return;
   }
   const result = formatPlainText(editor.value);
-  lastFormatSnapshot = { value: editor.value, start: editor.selectionStart, end: editor.selectionEnd };
+  lastFormatSnapshot = {
+    kind: 'editor',
+    value: editor.value,
+    start: editor.selectionStart,
+    end: editor.selectionEnd,
+  };
   editor.value = result.markdown;
   editor.setSelectionRange(0, 0);
   editor.focus();
   notifyInput();
-  showSmartFormatNotice(formatSummary(result));
+  showSmartFormatNotice(formatSummary(result), true);
 }
 
 function undoSmartFormat(): void {
   if (!lastFormatSnapshot) return;
-  editor.value = lastFormatSnapshot.value;
-  editor.setSelectionRange(lastFormatSnapshot.start, lastFormatSnapshot.end);
+  if (lastFormatSnapshot.kind === 'editor') {
+    editor.value = lastFormatSnapshot.value;
+    editor.setSelectionRange(lastFormatSnapshot.start, lastFormatSnapshot.end);
+    editor.focus();
+  } else {
+    descriptionInput.value = lastFormatSnapshot.value;
+    resizeTextArea(descriptionInput);
+    descriptionInput.focus();
+  }
   lastFormatSnapshot = undefined;
   requiredElement<HTMLElement>('#writer-smart-notice').hidden = true;
-  editor.focus();
   notifyInput();
+}
+
+function loadWriterAIConfig(): WriterAIConfig {
+  try {
+    const saved = sessionStorage.getItem(AI_SESSION_KEY);
+    if (!saved) return { ...DEFAULT_WRITER_AI_CONFIG };
+    const parsed = JSON.parse(saved) as Partial<WriterAIConfig>;
+    return { ...DEFAULT_WRITER_AI_CONFIG, ...parsed };
+  } catch {
+    return { ...DEFAULT_WRITER_AI_CONFIG };
+  }
+}
+
+function updateWriterAIState(): void {
+  const state = requiredElement<HTMLElement>('#writer-ai-state');
+  if (writerAIConfig.apiKey) {
+    state.textContent = `${writerAIConfig.model} · 本次会话`;
+    state.dataset.configured = 'true';
+  } else {
+    state.textContent = '尚未设置 API';
+    delete state.dataset.configured;
+  }
+}
+
+function openWriterAISettings(action?: WriterAIAction): void {
+  pendingAIAction = action;
+  requiredElement<HTMLInputElement>('#writer-ai-key').value = writerAIConfig.apiKey;
+  requiredElement<HTMLInputElement>('#writer-ai-model').value = writerAIConfig.model;
+  requiredElement<HTMLInputElement>('#writer-ai-endpoint').value = writerAIConfig.endpoint;
+  const dialog = requiredElement<HTMLDialogElement>('#writer-ai-dialog');
+  dialog.showModal();
+  window.setTimeout(() => requiredElement<HTMLInputElement>('#writer-ai-key').focus(), 0);
+}
+
+function closeWriterAISettings(): void {
+  pendingAIAction = undefined;
+  requiredElement<HTMLDialogElement>('#writer-ai-dialog').close();
+}
+
+function setAIProgress(active: boolean, label = 'AI 正在整理文章…'): void {
+  const progress = requiredElement<HTMLElement>('#writer-ai-progress');
+  progress.hidden = !active;
+  requiredElement<HTMLElement>('#writer-ai-progress-text').textContent = label;
+  for (const button of document.querySelectorAll<HTMLButtonElement>('[data-ai-action]')) {
+    button.disabled = active;
+  }
+}
+
+function friendlyAIError(error: unknown): string {
+  if (error instanceof DOMException && error.name === 'AbortError') return '已取消 AI 请求';
+  if (error instanceof TypeError) return '无法连接 AI 接口，请检查网络、地址或浏览器跨域设置';
+  return error instanceof Error ? error.message : 'AI 请求失败，请稍后重试';
+}
+
+async function runWriterAI(action: WriterAIAction): Promise<void> {
+  const selectedText = editor.value.slice(editor.selectionStart, editor.selectionEnd).trim();
+  const content = action === 'polish' && selectedText ? selectedText : editor.value.trim();
+  if (!content) {
+    showSmartFormatNotice('先粘贴或输入文章内容，再使用 AI 功能');
+    return;
+  }
+  if (!writerAIConfig.apiKey) {
+    openWriterAISettings(action);
+    return;
+  }
+
+  const start = action === 'polish' && selectedText ? editor.selectionStart : 0;
+  const end = action === 'polish' && selectedText ? editor.selectionEnd : editor.value.length;
+  aiRequestController?.abort();
+  aiRequestController = new AbortController();
+  setAIProgress(true, action === 'summary' ? 'AI 正在生成文章摘要…' : 'AI 正在整理并润色文章…');
+
+  try {
+    const result = await requestWriterAI(
+      writerAIConfig,
+      action,
+      content,
+      titleInput.value.trim(),
+      aiRequestController.signal,
+    );
+    if (action === 'summary') {
+      lastFormatSnapshot = { kind: 'description', value: descriptionInput.value };
+      descriptionInput.value = result.replace(/^[“\"]|[”\"]$/g, '').trim();
+      resizeTextArea(descriptionInput);
+      notifyInput();
+      showSmartFormatNotice('AI 摘要已写入文章摘要栏', true);
+    } else {
+      lastFormatSnapshot = { kind: 'editor', value: editor.value, start, end };
+      editor.setRangeText(result, start, end, 'end');
+      editor.focus();
+      notifyInput();
+      showSmartFormatNotice(selectedText ? 'AI 已润色选中内容' : 'AI 已整理并润色全文', true);
+    }
+  } catch (error) {
+    showSmartFormatNotice(friendlyAIError(error));
+  } finally {
+    aiRequestController = undefined;
+    setAIProgress(false);
+  }
 }
 
 function replaceSelection(before: string, after: string, placeholder: string): void {
@@ -621,6 +745,7 @@ const initialView = savedView === 'edit' || savedView === 'preview' || savedView
 setView(window.matchMedia('(max-width: 820px)').matches && initialView === 'split' ? 'edit' : initialView);
 renderPreview();
 updateEditorPosition();
+updateWriterAIState();
 
 for (const input of [titleInput, descriptionInput, editor, sectionInput, dateInput, tagsInput, coverInput, draftInput]) {
   input.addEventListener('input', () => {
@@ -674,6 +799,41 @@ requiredElement<HTMLButtonElement>('#new-draft').addEventListener('click', reset
 requiredElement<HTMLButtonElement>('#copy-markdown').addEventListener('click', copyMarkdown);
 requiredElement<HTMLButtonElement>('#download-markdown').addEventListener('click', downloadMarkdown);
 requiredElement<HTMLButtonElement>('#undo-smart-format').addEventListener('click', undoSmartFormat);
+requiredElement<HTMLButtonElement>('#ai-polish').addEventListener('click', () => runWriterAI('polish'));
+requiredElement<HTMLButtonElement>('#ai-summary').addEventListener('click', () => runWriterAI('summary'));
+requiredElement<HTMLButtonElement>('#open-ai-settings').addEventListener('click', () => openWriterAISettings());
+requiredElement<HTMLButtonElement>('#close-ai-settings').addEventListener('click', closeWriterAISettings);
+requiredElement<HTMLButtonElement>('#cancel-ai-request').addEventListener('click', () => aiRequestController?.abort());
+requiredElement<HTMLButtonElement>('#clear-ai-settings').addEventListener('click', () => {
+  sessionStorage.removeItem(AI_SESSION_KEY);
+  writerAIConfig = { ...DEFAULT_WRITER_AI_CONFIG };
+  requiredElement<HTMLInputElement>('#writer-ai-key').value = '';
+  updateWriterAIState();
+  showSmartFormatNotice('本次会话中的 API Key 已清除');
+});
+requiredElement<HTMLFormElement>('#writer-ai-settings-form').addEventListener('submit', (event) => {
+  event.preventDefault();
+  const apiKey = requiredElement<HTMLInputElement>('#writer-ai-key').value.trim();
+  const model = requiredElement<HTMLInputElement>('#writer-ai-model').value.trim();
+  const endpoint = requiredElement<HTMLInputElement>('#writer-ai-endpoint').value.trim();
+  if (!apiKey || !model || !endpoint) {
+    showSmartFormatNotice('请完整填写 API Key、模型和接口地址');
+    return;
+  }
+  try {
+    new URL(endpoint);
+  } catch {
+    showSmartFormatNotice('请输入有效的 API 接口地址');
+    return;
+  }
+  writerAIConfig = { apiKey, model, endpoint };
+  sessionStorage.setItem(AI_SESSION_KEY, JSON.stringify(writerAIConfig));
+  updateWriterAIState();
+  requiredElement<HTMLDialogElement>('#writer-ai-dialog').close();
+  const action = pendingAIAction;
+  pendingAIAction = undefined;
+  if (action) runWriterAI(action);
+});
 
 document.addEventListener('keydown', (event) => {
   if (!(event.metaKey || event.ctrlKey)) return;

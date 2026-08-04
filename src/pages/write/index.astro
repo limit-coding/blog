@@ -70,6 +70,14 @@ const today = new Date().toLocaleDateString('en-CA');
               ✦ 分标题
             </button>
           </div>
+          <div class="writer-toolbar-group writer-ai-toolbar-group">
+            <button class="writer-ai-button" id="ai-polish" type="button" data-ai-action="polish" title="润色选中内容；未选择时整理全文">
+              AI 润色
+            </button>
+            <button class="writer-ai-button" id="ai-summary" type="button" data-ai-action="summary" title="生成文章摘要并填入摘要栏">
+              AI 摘要
+            </button>
+          </div>
           <div class="writer-toolbar-group">
             <button type="button" data-editor-action="h2" aria-label="二级标题" title="二级标题">H2</button>
             <button type="button" data-editor-action="h3" aria-label="三级标题" title="三级标题">H3</button>
@@ -95,6 +103,12 @@ const today = new Date().toLocaleDateString('en-CA');
         <div class="writer-smart-notice" id="writer-smart-notice" role="status" aria-live="polite" hidden>
           <span id="writer-smart-notice-text"></span>
           <button id="undo-smart-format" type="button">撤销</button>
+        </div>
+
+        <div class="writer-ai-progress" id="writer-ai-progress" role="status" aria-live="polite" hidden>
+          <span class="writer-ai-spinner" aria-hidden="true"></span>
+          <strong id="writer-ai-progress-text">AI 正在整理文章…</strong>
+          <button id="cancel-ai-request" type="button">取消</button>
         </div>
 
         <label class="sr-only" for="markdown-editor">文章正文</label>
@@ -192,6 +206,14 @@ const today = new Date().toLocaleDateString('en-CA');
           </nav>
         </section>
 
+        <section class="writer-ai-card">
+          <div>
+            <span>AI 写作助手</span>
+            <strong id="writer-ai-state">尚未设置 API</strong>
+          </div>
+          <button id="open-ai-settings" type="button">设置</button>
+        </section>
+
         <section class="writer-path-card" aria-label="导出位置">
           <span>建议保存到</span>
           <code id="article-path">src/content/posts/tech/your-slug/index.md</code>
@@ -204,6 +226,51 @@ const today = new Date().toLocaleDateString('en-CA');
       </aside>
     </div>
   </div>
+
+  <dialog class="writer-ai-dialog" id="writer-ai-dialog" aria-labelledby="writer-ai-dialog-title">
+    <form id="writer-ai-settings-form">
+      <header>
+        <div>
+          <span>AI 写作助手</span>
+          <h2 id="writer-ai-dialog-title">连接 DeepSeek API</h2>
+        </div>
+        <button id="close-ai-settings" type="button" aria-label="关闭 AI 设置">×</button>
+      </header>
+
+      <p class="writer-ai-security-note">
+        API Key 只保存在当前浏览器标签页的临时会话中，不会写进文章、GitHub 仓库或网站构建产物。
+      </p>
+
+      <label for="writer-ai-key">
+        API Key
+        <input id="writer-ai-key" type="password" placeholder="sk-…" autocomplete="off" spellcheck="false" required />
+      </label>
+
+      <details>
+        <summary>模型与接口设置</summary>
+        <label for="writer-ai-model">
+          模型
+          <input id="writer-ai-model" type="text" value="deepseek-v4-flash" autocomplete="off" spellcheck="false" />
+        </label>
+        <label for="writer-ai-endpoint">
+          Chat Completions 地址
+          <input
+            id="writer-ai-endpoint"
+            type="url"
+            value="https://api.deepseek.com/chat/completions"
+            autocomplete="off"
+            spellcheck="false"
+          />
+        </label>
+        <small>也兼容使用 Bearer Key 的 OpenAI 格式接口。</small>
+      </details>
+
+      <footer>
+        <button class="writer-ai-clear-button" id="clear-ai-settings" type="button">清除密钥</button>
+        <button class="writer-primary-button" type="submit">保存并启用</button>
+      </footer>
+    </form>
+  </dialog>
 </WriterLayout>
 
 <script>
