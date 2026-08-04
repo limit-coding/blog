@@ -2,14 +2,23 @@
 import WriterLayout from '../../layouts/WriterLayout.astro';
 import { SECTIONS } from '../../consts';
 
+interface Props {
+  homeHref?: string;
+  writerHref?: string;
+}
+
+const {
+  homeHref = '/',
+  writerHref = '/write/',
+} = Astro.props;
 const today = new Date().toLocaleDateString('en-CA');
 ---
 
 <WriterLayout>
   <header class="writer-topbar" slot="header">
     <div class="writer-brand-group">
-      <a class="writer-back" href="/" aria-label="返回知识库">←</a>
-      <a class="writer-brand" href="/write/">
+      <a class="writer-back" href={homeHref} aria-label="返回知识库">←</a>
+      <a class="writer-brand" href={writerHref}>
         <strong>learnpath</strong>
         <span>写作台</span>
       </a>
@@ -238,12 +247,20 @@ const today = new Date().toLocaleDateString('en-CA');
       </header>
 
       <p class="writer-ai-security-note">
-        API Key 只保存在当前浏览器标签页的临时会话中，不会写进文章、GitHub 仓库或网站构建产物。
+        API Key 只保存在这台设备的浏览器本地，不会写进文章、GitHub 仓库或网站构建产物。请只在自己的设备上使用。
       </p>
 
       <label for="writer-ai-key">
         API Key
         <input id="writer-ai-key" type="password" placeholder="sk-…" autocomplete="off" spellcheck="false" required />
+      </label>
+
+      <label class="writer-ai-remember" for="writer-ai-remember">
+        <input id="writer-ai-remember" type="checkbox" checked />
+        <span>
+          <strong>在此设备记住 API Key</strong>
+          <small>保存在当前写作域名的浏览器本地存储；换设备或浏览器后需要重新输入。</small>
+        </span>
       </label>
 
       <details>

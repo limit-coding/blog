@@ -7,8 +7,11 @@
   },
   "scripts": {
     "dev": "astro dev",
+    "dev:writer": "astro dev --config astro.writer.config.mjs",
     "build": "astro build",
+    "build:writer": "astro build --config astro.writer.config.mjs",
     "preview": "astro preview",
+    "preview:writer": "astro preview --config astro.writer.config.mjs",
     "astro": "astro"
   },
   "dependencies": {

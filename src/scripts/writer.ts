@@ -52,6 +52,7 @@ marked.setOptions({ gfm: true, breaks: false });
 
 const STORAGE_KEY = 'learnpath.writer.draft.v1';
 const VIEW_KEY = 'learnpath.writer.view.v1';
+const AI_LOCAL_KEY = 'learnpath.writer.ai-local.v1';
 const AI_SESSION_KEY = 'learnpath.writer.ai-session.v1';
 
 interface DraftData {
@@ -156,6 +157,7 @@ let lastFormatSnapshot:
   | { kind: 'description'; value: string }
   | undefined;
 let writerAIConfig = loadWriterAIConfig();
+let writerAIStorage: 'local' | 'session' | undefined = getWriterAIStorage();
 let pendingAIAction: WriterAIAction | undefined;
 let aiRequestController: AbortController | undefined;
 
@@ -509,7 +511,7 @@ function undoSmartFormat(): void {
 
 function loadWriterAIConfig(): WriterAIConfig {
   try {
-    const saved = sessionStorage.getItem(AI_SESSION_KEY);
+    const saved = localStorage.getItem(AI_LOCAL_KEY) ?? sessionStorage.getItem(AI_SESSION_KEY);
     if (!saved) return { ...DEFAULT_WRITER_AI_CONFIG };
     const parsed = JSON.parse(saved) as Partial<WriterAIConfig>;
     return { ...DEFAULT_WRITER_AI_CONFIG, ...parsed };
@@ -518,10 +520,16 @@ function loadWriterAIConfig(): WriterAIConfig {
   }
 }
 
+function getWriterAIStorage(): 'local' | 'session' | undefined {
+  if (localStorage.getItem(AI_LOCAL_KEY)) return 'local';
+  if (sessionStorage.getItem(AI_SESSION_KEY)) return 'session';
+  return undefined;
+}
+
 function updateWriterAIState(): void {
   const state = requiredElement<HTMLElement>('#writer-ai-state');
   if (writerAIConfig.apiKey) {
-    state.textContent = `${writerAIConfig.model} · 本次会话`;
+    state.textContent = `${writerAIConfig.model} · ${writerAIStorage === 'local' ? '此设备' : '本次会话'}`;
     state.dataset.configured = 'true';
   } else {
     state.textContent = '尚未设置 API';
@@ -534,6 +542,7 @@ function openWriterAISettings(action?: WriterAIAction): void {
   requiredElement<HTMLInputElement>('#writer-ai-key').value = writerAIConfig.apiKey;
   requiredElement<HTMLInputElement>('#writer-ai-model').value = writerAIConfig.model;
   requiredElement<HTMLInputElement>('#writer-ai-endpoint').value = writerAIConfig.endpoint;
+  requiredElement<HTMLInputElement>('#writer-ai-remember').checked = writerAIStorage !== 'session';
   const dialog = requiredElement<HTMLDialogElement>('#writer-ai-dialog');
   dialog.showModal();
   window.setTimeout(() => requiredElement<HTMLInputElement>('#writer-ai-key').focus(), 0);
@@ -805,17 +814,20 @@ requiredElement<HTMLButtonElement>('#open-ai-settings').addEventListener('click'
 requiredElement<HTMLButtonElement>('#close-ai-settings').addEventListener('click', closeWriterAISettings);
 requiredElement<HTMLButtonElement>('#cancel-ai-request').addEventListener('click', () => aiRequestController?.abort());
 requiredElement<HTMLButtonElement>('#clear-ai-settings').addEventListener('click', () => {
+  localStorage.removeItem(AI_LOCAL_KEY);
   sessionStorage.removeItem(AI_SESSION_KEY);
   writerAIConfig = { ...DEFAULT_WRITER_AI_CONFIG };
+  writerAIStorage = undefined;
   requiredElement<HTMLInputElement>('#writer-ai-key').value = '';
   updateWriterAIState();
-  showSmartFormatNotice('本次会话中的 API Key 已清除');
+  showSmartFormatNotice('此设备中的 API Key 已清除');
 });
 requiredElement<HTMLFormElement>('#writer-ai-settings-form').addEventListener('submit', (event) => {
   event.preventDefault();
   const apiKey = requiredElement<HTMLInputElement>('#writer-ai-key').value.trim();
   const model = requiredElement<HTMLInputElement>('#writer-ai-model').value.trim();
   const endpoint = requiredElement<HTMLInputElement>('#writer-ai-endpoint').value.trim();
+  const rememberOnDevice = requiredElement<HTMLInputElement>('#writer-ai-remember').checked;
   if (!apiKey || !model || !endpoint) {
     showSmartFormatNotice('请完整填写 API Key、模型和接口地址');
     return;
@@ -827,7 +839,15 @@ requiredElement<HTMLFormElement>('#writer-ai-settings-form').addEventListener('s
     return;
   }
   writerAIConfig = { apiKey, model, endpoint };
-  sessionStorage.setItem(AI_SESSION_KEY, JSON.stringify(writerAIConfig));
+  if (rememberOnDevice) {
+    localStorage.setItem(AI_LOCAL_KEY, JSON.stringify(writerAIConfig));
+    sessionStorage.removeItem(AI_SESSION_KEY);
+    writerAIStorage = 'local';
+  } else {
+    sessionStorage.setItem(AI_SESSION_KEY, JSON.stringify(writerAIConfig));
+    localStorage.removeItem(AI_LOCAL_KEY);
+    writerAIStorage = 'session';
+  }
   updateWriterAIState();
   requiredElement<HTMLDialogElement>('#writer-ai-dialog').close();
   const action = pendingAIAction;

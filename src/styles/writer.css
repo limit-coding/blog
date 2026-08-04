@@ -1143,6 +1143,36 @@ input[type='checkbox'] {
   box-shadow: 0 0 0 2px var(--writer-accent-soft);
 }
 
+.writer-ai-dialog .writer-ai-remember {
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  gap: 0.65rem;
+  padding: 0.7rem 0.75rem;
+  border: 1px solid var(--writer-line);
+  border-radius: 6px;
+  color: var(--writer-ink);
+  background: var(--writer-surface-subtle);
+}
+
+.writer-ai-dialog .writer-ai-remember input {
+  width: 15px;
+  height: 15px;
+  margin-top: 0.15rem;
+  accent-color: var(--writer-accent);
+}
+
+.writer-ai-remember span {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.writer-ai-remember small {
+  color: var(--writer-muted);
+  font-size: 0.64rem;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
 .writer-ai-dialog details {
   margin-top: 0.9rem;
   padding-top: 0.8rem;
