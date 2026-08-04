@@ -9,7 +9,7 @@ export interface SmartFormatResult {
 }
 
 interface HeadingMatch {
-  level: 2 | 3 | 4;
+  level: 1 | 2 | 3 | 4;
   text: string;
 }
 
@@ -32,7 +32,7 @@ function explicitHeading(line: string): HeadingMatch | undefined {
   const markdownHeading = text.match(/^(#{1,6})\s+(.+)$/);
   if (markdownHeading) {
     const requestedLevel = markdownHeading[1].length;
-    const level = Math.min(4, Math.max(2, requestedLevel)) as 2 | 3 | 4;
+    const level = Math.min(4, Math.max(1, requestedLevel)) as 1 | 2 | 3 | 4;
     return { level, text: markdownHeading[2].trim() };
   }
 
@@ -276,7 +276,7 @@ function prepareRichHtml(html: string): string {
 
     const fontSize = style.match(/font-size\s*:\s*([\d.]+)(px|pt)/i);
     const size = fontSize ? Number(fontSize[1]) * (fontSize[2].toLowerCase() === 'pt' ? 1.333 : 1) : 0;
-    const level = size >= 23 || /(?:title|heading[-_ ]?1)/i.test(className) ? 2 : 3;
+    const level = size >= 23 || /(?:title|heading[-_ ]?1)/i.test(className) ? 1 : 3;
     const heading = document.createElement(`h${level}`);
     heading.innerHTML = node.innerHTML;
     node.replaceWith(heading);
@@ -298,7 +298,7 @@ export function convertRichTextToMarkdown(html: string, fallbackText = ''): Smar
     filter: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
     replacement(content, node) {
       const originalLevel = Number(node.tagName.slice(1));
-      const level = originalLevel <= 2 ? 2 : originalLevel <= 4 ? 3 : 4;
+      const level = originalLevel === 1 ? 1 : originalLevel === 2 ? 2 : originalLevel <= 4 ? 3 : 4;
       return `\n\n${'#'.repeat(level)} ${content.trim()}\n\n`;
     },
   });

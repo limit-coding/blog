@@ -627,6 +627,7 @@ input[type='checkbox'] {
   margin-top: 0;
 }
 
+.writer-preview-content h1,
 .writer-preview-content h2,
 .writer-preview-content h3,
 .writer-preview-content h4 {
@@ -635,6 +636,12 @@ input[type='checkbox'] {
   font-family: var(--writer-sans);
   letter-spacing: -0.025em;
   line-height: 1.35;
+}
+
+.writer-preview-content h1 {
+  margin: 3.8rem 0 1.1rem;
+  font-size: 2rem;
+  font-weight: 750;
 }
 
 .writer-preview-content h2 {

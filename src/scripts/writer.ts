@@ -324,7 +324,7 @@ function renderMarkdown(source: string): void {
   });
 
   const usedIds = new Set<string>();
-  const headings = [...previewContent.querySelectorAll<HTMLHeadingElement>('h2, h3')];
+  const headings = [...previewContent.querySelectorAll<HTMLHeadingElement>('h1, h2, h3')];
   for (const [index, heading] of headings.entries()) {
     const baseId = slugify(heading.textContent ?? '') || `section-${index + 1}`;
     let id = baseId;
@@ -340,7 +340,7 @@ function renderOutline(headings: HTMLHeadingElement[]): void {
   outline.replaceChildren();
   if (headings.length === 0) {
     const empty = document.createElement('p');
-    empty.textContent = '添加二级标题后，这里会生成目录。';
+    empty.textContent = '添加标题后，这里会生成目录。';
     outline.append(empty);
     return;
   }
@@ -642,6 +642,7 @@ function prefixSelectedLines(prefix: string | ((index: number) => string)): void
 function handleToolbarAction(action: string): void {
   switch (action) {
     case 'auto-format': autoFormatDocument(); break;
+    case 'h1': prefixSelectedLines('# '); break;
     case 'h2': prefixSelectedLines('## '); break;
     case 'h3': prefixSelectedLines('### '); break;
     case 'bold': replaceSelection('**', '**', '重点内容'); break;
