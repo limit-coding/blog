@@ -58,7 +58,18 @@ const today = new Date().toLocaleDateString('en-CA');
           ></textarea>
         </div>
 
-        <div class="writer-toolbar" role="toolbar" aria-label="Markdown 格式工具">
+        <div class="writer-toolbar" role="toolbar" aria-label="文章格式工具">
+          <div class="writer-toolbar-group writer-smart-format-group">
+            <button
+              class="writer-smart-format-button"
+              type="button"
+              data-editor-action="auto-format"
+              aria-label="自动识别段落和分标题"
+              title="根据现有段落和标题格式自动排版"
+            >
+              ✦ 分标题
+            </button>
+          </div>
           <div class="writer-toolbar-group">
             <button type="button" data-editor-action="h2" aria-label="二级标题" title="二级标题">H2</button>
             <button type="button" data-editor-action="h3" aria-label="三级标题" title="三级标题">H3</button>
@@ -81,6 +92,11 @@ const today = new Date().toLocaleDateString('en-CA');
           </div>
         </div>
 
+        <div class="writer-smart-notice" id="writer-smart-notice" role="status" aria-live="polite" hidden>
+          <span id="writer-smart-notice-text"></span>
+          <button id="undo-smart-format" type="button">撤销</button>
+        </div>
+
         <label class="sr-only" for="markdown-editor">文章正文</label>
         <textarea
           id="markdown-editor"
@@ -91,7 +107,7 @@ const today = new Date().toLocaleDateString('en-CA');
 
         <footer class="writer-editor-footer">
           <span id="editor-position">第 1 行，第 1 列</span>
-          <span>Markdown</span>
+          <span>智能排版 · Markdown 存储</span>
         </footer>
       </section>
 
@@ -179,6 +195,11 @@ const today = new Date().toLocaleDateString('en-CA');
         <section class="writer-path-card" aria-label="导出位置">
           <span>建议保存到</span>
           <code id="article-path">src/content/posts/tech/your-slug/index.md</code>
+        </section>
+
+        <section class="writer-paste-tip">
+          <strong>直接粘贴长文即可</strong>
+          <p>从 Word、备忘录或网页粘贴时，会保留标题、段落、列表和强调格式；纯文本会按编号与短标题自动分节。</p>
         </section>
       </aside>
     </div>

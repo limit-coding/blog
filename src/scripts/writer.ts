@@ -14,6 +14,12 @@ import xml from 'highlight.js/lib/languages/xml';
 import yaml from 'highlight.js/lib/languages/yaml';
 import katex from 'katex';
 import { marked } from 'marked';
+import {
+  convertRichTextToMarkdown,
+  formatPlainText,
+  shouldSmartFormatPaste,
+  type SmartFormatResult,
+} from './smart-format';
 
 hljs.registerLanguage('bash', bash);
 hljs.registerLanguage('shell', bash);
@@ -137,6 +143,8 @@ const stats = {
 let saveTimer: number | undefined;
 let renderFrame: number | undefined;
 let slugWasEdited = false;
+let noticeTimer: number | undefined;
+let lastFormatSnapshot: { value: string; start: number; end: number } | undefined;
 
 function loadDraft(): DraftData {
   try {
@@ -423,6 +431,57 @@ function notifyInput(): void {
   updateEditorPosition();
 }
 
+function formatSummary(result: SmartFormatResult): string {
+  const source = result.source === 'rich' ? '已保留原有排版' : '已整理原有段落';
+  if (result.headings > 0) return `${source}，识别出 ${result.headings} 个分标题`;
+  return `${source}，暂未发现明确的标题格式`;
+}
+
+function showSmartFormatNotice(message: string): void {
+  const notice = requiredElement<HTMLElement>('#writer-smart-notice');
+  requiredElement<HTMLElement>('#writer-smart-notice-text').textContent = message;
+  notice.hidden = false;
+  if (noticeTimer) window.clearTimeout(noticeTimer);
+  noticeTimer = window.setTimeout(() => {
+    notice.hidden = true;
+  }, 8000);
+}
+
+function applyFormattedText(result: SmartFormatResult, start: number, end: number): void {
+  lastFormatSnapshot = { value: editor.value, start, end };
+  const needsPrefix = start > 0 && editor.value[start - 1] !== '\n';
+  const needsSuffix = end < editor.value.length && editor.value[end] !== '\n';
+  const inserted = `${needsPrefix ? '\n\n' : ''}${result.markdown}${needsSuffix ? '\n\n' : ''}`;
+  editor.setRangeText(inserted, start, end, 'end');
+  editor.focus();
+  notifyInput();
+  showSmartFormatNotice(formatSummary(result));
+}
+
+function autoFormatDocument(): void {
+  if (!editor.value.trim()) {
+    showSmartFormatNotice('先粘贴或输入一段文字，再使用自动分标题');
+    return;
+  }
+  const result = formatPlainText(editor.value);
+  lastFormatSnapshot = { value: editor.value, start: editor.selectionStart, end: editor.selectionEnd };
+  editor.value = result.markdown;
+  editor.setSelectionRange(0, 0);
+  editor.focus();
+  notifyInput();
+  showSmartFormatNotice(formatSummary(result));
+}
+
+function undoSmartFormat(): void {
+  if (!lastFormatSnapshot) return;
+  editor.value = lastFormatSnapshot.value;
+  editor.setSelectionRange(lastFormatSnapshot.start, lastFormatSnapshot.end);
+  lastFormatSnapshot = undefined;
+  requiredElement<HTMLElement>('#writer-smart-notice').hidden = true;
+  editor.focus();
+  notifyInput();
+}
+
 function replaceSelection(before: string, after: string, placeholder: string): void {
   const start = editor.selectionStart;
   const end = editor.selectionEnd;
@@ -449,6 +508,7 @@ function prefixSelectedLines(prefix: string | ((index: number) => string)): void
 
 function handleToolbarAction(action: string): void {
   switch (action) {
+    case 'auto-format': autoFormatDocument(); break;
     case 'h2': prefixSelectedLines('## '); break;
     case 'h3': prefixSelectedLines('### '); break;
     case 'bold': replaceSelection('**', '**', '重点内容'); break;
@@ -580,6 +640,23 @@ slugInput.addEventListener('input', () => {
 editor.addEventListener('click', updateEditorPosition);
 editor.addEventListener('keyup', updateEditorPosition);
 editor.addEventListener('select', updateEditorPosition);
+editor.addEventListener('paste', (event) => {
+  const clipboard = event.clipboardData;
+  if (!clipboard) return;
+  const plainText = clipboard.getData('text/plain');
+  const html = clipboard.getData('text/html');
+  if (!plainText || !shouldSmartFormatPaste(plainText, html)) return;
+
+  const beforeCursor = editor.value.slice(0, editor.selectionStart);
+  const fenceCount = beforeCursor.match(/^\s*```/gm)?.length ?? 0;
+  if (fenceCount % 2 === 1) return;
+
+  event.preventDefault();
+  const result = html
+    ? convertRichTextToMarkdown(html, plainText)
+    : formatPlainText(plainText);
+  applyFormattedText(result, editor.selectionStart, editor.selectionEnd);
+});
 
 for (const button of document.querySelectorAll<HTMLButtonElement>('[data-editor-action]')) {
   button.addEventListener('click', () => handleToolbarAction(button.dataset.editorAction ?? ''));
@@ -596,6 +673,7 @@ requiredElement<HTMLButtonElement>('#close-settings').addEventListener('click', 
 requiredElement<HTMLButtonElement>('#new-draft').addEventListener('click', resetDraft);
 requiredElement<HTMLButtonElement>('#copy-markdown').addEventListener('click', copyMarkdown);
 requiredElement<HTMLButtonElement>('#download-markdown').addEventListener('click', downloadMarkdown);
+requiredElement<HTMLButtonElement>('#undo-smart-format').addEventListener('click', undoSmartFormat);
 
 document.addEventListener('keydown', (event) => {
   if (!(event.metaKey || event.ctrlKey)) return;
